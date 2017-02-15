@@ -3,6 +3,18 @@ from ctypes import c_uint, c_bool
 from . import ffi
 from . import passmanagers
 
+import platform
+
+# Workaround for PyPy issue #2475
+# https://bitbucket.org/pypy/pypy/issues/2475/
+if platform.python_implementation() == 'PyPy':
+    def bool_workaround(func):
+        def property_to_bool(*args, **kwargs):
+            return bool(func(*args, **kwargs))
+        return property_to_bool
+else:
+    def bool_workaround(f):
+        return f
 
 def create_pass_manager_builder():
     return PassManagerBuilder()
@@ -51,6 +63,7 @@ class PassManagerBuilder(ffi.ObjectRef):
         ffi.lib.LLVMPY_PassManagerBuilderUseInlinerWithThreshold(self, threshold)
 
     @property
+    @bool_workaround
     def disable_unit_at_a_time(self):
         return ffi.lib.LLVMPY_PassManagerBuilderGetDisableUnitAtATime(self)
 
@@ -59,6 +72,7 @@ class PassManagerBuilder(ffi.ObjectRef):
         ffi.lib.LLVMPY_PassManagerBuilderSetDisableUnitAtATime(self, disable)
 
     @property
+    @bool_workaround
     def disable_unroll_loops(self):
         """
         If true, disable loop unrolling.
@@ -70,6 +84,7 @@ class PassManagerBuilder(ffi.ObjectRef):
         ffi.lib.LLVMPY_PassManagerBuilderSetDisableUnrollLoops(self, disable)
 
     @property
+    @bool_workaround
     def loop_vectorize(self):
         """
         If true, allow vectorizing loops.
@@ -81,6 +96,7 @@ class PassManagerBuilder(ffi.ObjectRef):
         return ffi.lib.LLVMPY_PassManagerBuilderSetLoopVectorize(self, enable)
 
     @property
+    @bool_workaround
     def slp_vectorize(self):
         """
         If true, enable the "SLP vectorizer", which uses a different algorithm
