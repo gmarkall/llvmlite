@@ -10,5 +10,7 @@ export PYTHONNOUSERSITE=1
 # Enables static linking of stdlibc++
 export LLVMLITE_CXX_STATIC_LINK=1
 
-python setup.py build --force
-python setup.py install
+pypy -m ensurepip
+pypy -m pip install enum34
+pypy setup.py build --force
+pypy setup.py install

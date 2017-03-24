@@ -1,5 +1,5 @@
 package:
-  name: llvmlite
+  name: pypy-llvmlite
   # GIT_DESCRIBE_TAG may not be set
   version: {{ environ.get('GIT_DESCRIBE_TAG', '').lstrip('v') }}
 
@@ -12,22 +12,11 @@ build:
 
 requirements:
   build:
-    - python
+    - pypy
     # On channel https://anaconda.org/numba/
     - llvmdev 3.9*
-    # Those are copied into the llvmlite packages
-    - vs2013_runtime [win]
-    # The DLL build uses cmake on Windows
-    - cmake          [win]
-    - enum34         [py27]
   run:
-    - python
-    - enum34         [py27]
-
-test:
-  imports:
-    - llvmlite
-    - llvmlite.binding
+    - pypy
 
 about:
   home: https://github.com/numba/llvmlite
