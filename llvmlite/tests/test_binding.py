@@ -1478,6 +1478,80 @@ class TestTypeParsing(BaseTest):
             gv.initializer = ir.Constant(typ, [1])
 
 
+class TestConstOps(BaseTest):
+    @contextmanager
+    def check_parsing(self):
+        mod = ir.Module()
+        # Yield to caller and provide the module for adding
+        # new GV.
+        yield mod
+        # Caller yield back and continue with testing
+        asm = str(mod)
+        llvm.parse_assembly(asm)
+
+    def test_int_binops(self):
+        with self.check_parsing() as mod:
+            ft = ir.FunctionType(ir.IntType(32), [])
+            fn = ir.Function(mod, ft, "foo")
+            bd = ir.IRBuilder(fn.append_basic_block())
+
+            one = ir.Constant(ir.IntType(32), 1)
+            two = ir.Constant(ir.IntType(32), 2)
+            n = one
+
+            oracle = {one.shl:  'shl',  one.lshr: 'lshr', one.ashr: 'ashr',
+                      one.add:  'add',  one.sub:  'sub',  one.mul:  'mul',
+                      one.udiv: 'udiv', one.sdiv: 'sdiv', one.urem: 'urem',
+                      one.srem: 'srem', one.or_:  'or',   one.and_: 'and',
+                      one.xor:  'xor'}
+            for fn, irop in oracle.items():
+                n = bd.add(n, fn(two))
+
+            # unsigned integer compare
+            oracle = {'==': 'eq', '!=': 'ne', '>':
+                      'ugt', '>=': 'uge', '<': 'ult', '<=': 'ule'}
+            for cop, cond in oracle.items():
+                n = bd.add(n, one.icmp_unsigned(cop, two).zext(ir.IntType(32)))
+
+            # signed integer compare
+            oracle = {'==': 'eq', '!=': 'ne',
+                      '>': 'sgt', '>=': 'sge', '<': 'slt', '<=': 'sle'}
+            for cop, cond in oracle.items():
+                n = bd.add(n, one.icmp_signed(cop, two).zext(ir.IntType(32)))
+
+            bd.ret(n)
+            print(mod)
+
+    def test_float_binops(self):
+        with self.check_parsing() as mod:
+            ft = ir.FunctionType(ir.FloatType(), [])
+            fn = ir.Function(mod, ft, "foo")
+            bd = ir.IRBuilder(fn.append_basic_block())
+
+            one = ir.Constant(ir.FloatType(), 1)
+            two = ir.Constant(ir.FloatType(), 2)
+            n = one
+
+            oracle = {one.fadd: 'fadd', one.fsub: 'fsub', one.fmul:  'fmul',
+                      one.fdiv: 'fdiv', one.frem: 'frem'}
+
+            for fn, irop in oracle.items():
+                n = bd.fadd(n, fn(two))
+
+            oracle = {'==': 'oeq', '!=': 'one', '>': 'ogt', '>=': 'oge',
+                      '<': 'olt', '<=': 'ole'}
+            for cop, cond in oracle.items():
+                n = bd.uitofp(one.fcmp_ordered(cop, two), ir.FloatType())
+
+            oracle = {'==': 'ueq', '!=': 'une', '>': 'ugt', '>=': 'uge',
+                      '<': 'ult', '<=': 'ule'}
+            for cop, cond in oracle.items():
+                n = bd.uitofp(one.fcmp_unordered(cop, two), ir.FloatType())
+
+            bd.ret(n)
+            print(mod)
+
+
 class TestGlobalConstructors(TestMCJit):
     def test_global_ctors_dtors(self):
         # test issue #303
