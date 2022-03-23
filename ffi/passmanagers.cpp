@@ -91,7 +91,7 @@ LLVMPY_AddAAEvalPass(LLVMPassManagerRef PM) {
 }
 
 API_EXPORT(void)
-LLVMPY_AddBasicAAPass(LLVMPassManagerRef PM) {
+LLVMPY_AddBasicAAWrapperPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createBasicAAWrapperPass());
 }
 
@@ -106,7 +106,7 @@ LLVMPY_AddCallGraphViewerPass(LLVMPassManagerRef PM) {
 }
 
 API_EXPORT(void)
-LLVMPY_AddDotCallGraphPass(LLVMPassManagerRef PM) {
+LLVMPY_AddCallGraphDOTPrinterPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createCallGraphDOTPrinterPass());
 }
 
@@ -138,17 +138,17 @@ LLVMPY_AddConstantMergePass(LLVMPassManagerRef PM) {
 }
 
 API_EXPORT(void)
-LLVMPY_AddDeadInstructionEliminationPrinterPass(LLVMPassManagerRef PM) {
+LLVMPY_AddDeadInstructionEliminationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createDeadInstEliminationPass());
 }
 
 API_EXPORT(void)
-LLVMPY_AddDeadStoreEliminationPrinterPass(LLVMPassManagerRef PM) {
+LLVMPY_AddDeadStoreEliminationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createDeadStoreEliminationPass());
 }
 
 API_EXPORT(void)
-LLVMPY_AddPostOrderFunctionAttrsPass(LLVMPassManagerRef PM) {
+LLVMPY_AddReversePostOrderFunctionAttrsPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createReversePostOrderFunctionAttrsPass());
 }
 
@@ -176,7 +176,7 @@ LLVMPY_AddLintPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createLintPass());
 }
 API_EXPORT(void)
-LLVMPY_AddModuleDebugInfoPass(LLVMPassManagerRef PM) {
+LLVMPY_AddModuleDebugInfoPrinterPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createModuleDebugInfoPrinterPass());
 }
 
@@ -196,7 +196,7 @@ LLVMPY_AddAggressiveDCEPass(LLVMPassManagerRef PM) {
 }
 
 API_EXPORT(void)
-LLVMPY_AddAlwaysInlinePass(LLVMPassManagerRef PM, bool insertLifetime) {
+LLVMPY_AddAlwaysInlinerPass(LLVMPassManagerRef PM, bool insertLifetime) {
   unwrap(PM)->add(llvm::createAlwaysInlinerLegacyPass(insertLifetime));
 }
 
@@ -206,7 +206,7 @@ LLVMPY_AddArgPromotionPass(LLVMPassManagerRef PM, unsigned int maxElements) {
 }
 
 API_EXPORT(void)
-LLVMPY_AddBreakCritEdgesPass(LLVMPassManagerRef PM) {
+LLVMPY_AddBreakCriticalEdgesPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(llvm::createBreakCriticalEdgesPass());
 }
 
