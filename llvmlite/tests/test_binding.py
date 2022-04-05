@@ -510,7 +510,7 @@ class TestMisc(BaseTest):
     def test_version(self):
         major, minor, patch = llvm.llvm_version_info
         # one of these can be valid
-        valid = [(11,)]
+        valid = [(11,), (12, ), (13, )]
         self.assertIn((major,), valid)
         self.assertIn(patch, range(10))
 
@@ -1414,7 +1414,6 @@ class TestPasses(BaseTest, PassManagerTestMixin):
         pm.add_always_inliner_pass()
         pm.add_arg_promotion_pass(42)
         pm.add_break_critical_edges_pass()
-        pm.add_dead_instruction_elimination_pass()
         pm.add_dead_store_elimination_pass()
         pm.add_post_order_function_attrs_pass()
         pm.add_aggressive_instruction_combining_pass()
