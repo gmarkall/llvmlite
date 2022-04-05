@@ -195,11 +195,6 @@ LLVMPY_AddConstantMergePass(LLVMPassManagerRef PM) {
 }
 
 API_EXPORT(void)
-LLVMPY_AddDeadInstructionEliminationPass(LLVMPassManagerRef PM) {
-    unwrap(PM)->add(llvm::createDeadInstEliminationPass());
-}
-
-API_EXPORT(void)
 LLVMPY_AddDeadStoreEliminationPass(LLVMPassManagerRef PM) {
     unwrap(PM)->add(llvm::createDeadStoreEliminationPass());
 }
@@ -230,7 +225,11 @@ LLVMPY_AddLazyValueInfoPass(LLVMPassManagerRef PM) {
 }
 API_EXPORT(void)
 LLVMPY_AddLintPass(LLVMPassManagerRef PM) {
+#if LLVM_VERSION_MAJOR < 12
     unwrap(PM)->add(llvm::createLintPass());
+#else
+    unwrap(PM)->add(llvm::createLintLegacyPassPass());
+#endif
 }
 API_EXPORT(void)
 LLVMPY_AddModuleDebugInfoPrinterPass(LLVMPassManagerRef PM) {

@@ -204,7 +204,11 @@ LLVMPY_CreateTargetMachine(LLVMTargetRef T, const char *Triple, const char *CPU,
         rm = Reloc::DynamicNoPIC;
 
     TargetOptions opt;
+#if LLVM_VERSION_MAJOR < 12
     opt.PrintMachineCode = PrintMC;
+#else
+    opt.MCOptions.ShowMCInst = PrintMC;
+#endif
     opt.MCOptions.ABIName = ABIName;
 
     bool jit = JIT;

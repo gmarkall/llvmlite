@@ -191,10 +191,6 @@ class PassManager(ffi.ObjectRef):
         """See https://llvm.org/docs/Passes.html#break-crit-edges-break-critical-edges-in-cfg"""  # noqa E501
         ffi.lib.LLVMPY_AddBreakCriticalEdgesPass(self)
 
-    def add_dead_instruction_elimination_pass(self):
-        """See https://llvm.org/docs/Passes.html#die-dead-instruction-elimination"""  # noqa E501
-        ffi.lib.LLVMPY_AddDeadInstructionEliminationPass(self)
-
     def add_dead_store_elimination_pass(self):
         """See https://llvm.org/docs/Passes.html#dse-dead-store-elimination"""  # noqa E501
         ffi.lib.LLVMPY_AddDeadStoreEliminationPass(self)
@@ -606,8 +602,6 @@ ffi.lib.LLVMPY_AddAggressiveDCEPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddAlwaysInlinerPass.argtypes = [ffi.LLVMPassManagerRef, c_bool]
 ffi.lib.LLVMPY_AddArgPromotionPass.argtypes = [ffi.LLVMPassManagerRef, c_uint]
 ffi.lib.LLVMPY_AddBreakCriticalEdgesPass.argtypes = [ffi.LLVMPassManagerRef]
-ffi.lib.LLVMPY_AddDeadInstructionEliminationPass.argtypes = [
-    ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddDeadStoreEliminationPass.argtypes = [
     ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddReversePostOrderFunctionAttrsPass.argtypes = [
