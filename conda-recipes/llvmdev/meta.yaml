@@ -1,7 +1,6 @@
-{% set shortversion = "13.0" %}
-{% set version = "13.0.1" %}
-{% set sha256_llvm = "ec6b80d82c384acad2dc192903a6cf2cdbaffb889b84bfb98da9d71e630fc834" %}
-{% set sha256_lld = "666af745e8bf7b680533b4d18b7a31dc7cab575b1e6e4d261922bbafd9644cfb" %}
+{% set shortversion = "14.0" %}
+{% set version = "14.0.1" %}
+{% set sha256_llvm = "1a3c2e57916c5a70153aaf0a0e6f1230d6368b9e0f4d04dcb9e039a31b1cd4e6" %}
 {% set build_number = "5" %}
 
 package:
@@ -9,16 +8,12 @@ package:
   version: {{ version }}
 
 source:
-  - url: https://github.com/llvm/llvm-project/releases/download/llvmorg-{{ version }}/llvm-{{ version }}.src.tar.xz
+  - url: https://github.com/llvm/llvm-project/releases/download/llvmorg-{{ version }}/llvm-project-{{ version }}.src.tar.xz
     fn: llvm-{{ version }}.src.tar.xz
     sha256: {{ sha256_llvm }}
     patches:
     - ../llvm13-lto-static.patch
-
-  - url: https://github.com/llvm/llvm-project/releases/download/llvmorg-{{ version }}/lld-{{ version }}.src.tar.xz
-    fn: lld-{{ version }}.src.tar.xz
-    sha256: {{ sha256_lld }}
-    folder: tools/lld
+    - ../llvm14-remove-use-of-clonefile.patch
 
 build:
   number: {{ build_number }}
@@ -51,8 +46,6 @@ requirements:
     - python # [not (armv6l or armv7l or aarch64 or win)]
 
 test:
-  files:
-    - numba-3016.ll
   commands:
     - $PREFIX/bin/llvm-config --libs                         # [not win]
     - $PREFIX/bin/llc -version                               # [not win]
@@ -73,5 +66,5 @@ about:
   home: http://llvm.org/
   dev_url: https://github.com/llvm-mirror/llvm
   license: NCSA
-  license_file: LICENSE.TXT
+  license_file: llvm/LICENSE.TXT
   summary: Development headers and libraries for LLVM

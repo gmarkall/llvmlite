@@ -1,0 +1,29 @@
+--- a/llvm/lib/Support/Unix/Path.inc	2022-01-08 15:15:44.000000000 +0000
++++ b/llvm/lib/Support/Unix/Path.inc	2022-01-08 15:16:07.000000000 +0000
+@@ -1458,6 +1458,7 @@
+ std::error_code copy_file(const Twine &From, const Twine &To) {
+   std::string FromS = From.str();
+   std::string ToS = To.str();
++  /*
+ #if __has_builtin(__builtin_available)
+   if (__builtin_available(macos 10.12, *)) {
+     // Optimistically try to use clonefile() and handle errors, rather than
+@@ -1486,6 +1487,7 @@
+     // cheaper.
+   }
+ #endif
++  */
+   if (!copyfile(FromS.c_str(), ToS.c_str(), /*State=*/NULL, COPYFILE_DATA))
+     return std::error_code();
+   return std::error_code(errno, std::generic_category());
+--- a/llvm/unittests/Support/Path.cpp	2022-04-25 16:53:43.000000000 -0400
++++ b/llvm/unittests/Support/Path.cpp	2022-04-25 16:54:32.000000000 -0400
+@@ -2275,7 +2275,7 @@
+   // AIX and Solaris without root will mask off (i.e., lose) the sticky bit
+   // on files.
+ #if !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) &&  \
+-    !defined(_AIX) && !(defined(__sun__) && defined(__svr4__))
++    !defined(_AIX) && !(defined(__sun__) && defined(__svr4__)) && !defined(__APPLE__)
+   EXPECT_EQ(fs::setPermissions(TempPath, fs::sticky_bit), NoError);
+   EXPECT_TRUE(CheckPermissions(fs::sticky_bit));
+ 
