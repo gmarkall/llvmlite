@@ -48,7 +48,7 @@ set "CMAKE_GENERATOR_TOOLSET[2]=v141"
 REM Reduce build times and package size by removing unused stuff
 REM BENCHMARKS (new for llvm8) don't build under Visual Studio 14 2015
 set CMAKE_CUSTOM=-DLLVM_TARGETS_TO_BUILD="%LLVM_TARGETS_TO_BUILD%" ^
-    -DLLVM_INCLUDE_TESTS=OFF ^
+    -DLLVM_ENABLE_PROJECTS:STRING=lld ^
     -DLLVM_INCLUDE_UTILS=ON ^
     -DLLVM_INCLUDE_DOCS=OFF ^
     -DLLVM_INCLUDE_EXAMPLES=OFF ^
@@ -67,7 +67,7 @@ for /l %%n in (0,1,%MAX_INDEX_CMAKE_GENERATOR%) do (
           -DCMAKE_BUILD_TYPE="%BUILD_CONFIG%" ^
           -DCMAKE_PREFIX_PATH="%LIBRARY_PREFIX%" ^
           -DCMAKE_INSTALL_PREFIX:PATH="%LIBRARY_PREFIX%" ^
-          %CMAKE_CUSTOM% "%SRC_DIR%"
+          %CMAKE_CUSTOM% "%SRC_DIR%\llvm"
     if not errorlevel 1 goto configuration_successful
     del CMakeCache.txt
 )
@@ -85,13 +85,3 @@ if errorlevel 1 exit 1
 REM === Install step ===
 cmake --build . --config "%BUILD_CONFIG%" --target install
 if errorlevel 1 exit 1
-
-REM From: https://github.com/conda-forge/llvmdev-feedstock/pull/53
-"%BUILD_CONFIG%\bin\opt" -S -vector-library=SVML -mcpu=haswell -O3 "%RECIPE_DIR%\numba-3016.ll" | "%BUILD_CONFIG%\bin\FileCheck" "%RECIPE_DIR%\numba-3016.ll"
-if errorlevel 1 exit 1
-
-REM This is technically how to run the suite, but it will only run in an
-REM enhanced unix-like shell which has functions like `grep` available.
-REM cd ..\test
-REM "%PYTHON%" "..\build\%BUILD_CONFIG%\bin\llvm-lit.py" -vv Transforms ExecutionEngine Analysis CodeGen/X86
-REM if errorlevel 1 exit 1

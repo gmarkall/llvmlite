@@ -6,7 +6,11 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Host.h"
+#if LLVM_VERSION_MAJOR > 13
+#include "llvm/MC/TargetRegistry.h"
+#else
 #include "llvm/Support/TargetRegistry.h"
+#endif
 #include "llvm/Target/TargetMachine.h"
 
 #include <cstdio>

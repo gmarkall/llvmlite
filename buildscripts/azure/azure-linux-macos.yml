@@ -38,6 +38,12 @@ jobs:
         flake8 llvmlite
       displayName: 'Flake8'
       condition: eq(variables['RUN_FLAKE8'], 'yes')
+    - script: |
+         set -e
+         conda install -y clang-tools
+         clang-format -n -Werror ffi/*.cpp ffi/*.h
+      displayName: Check C++ formatting
+      condition: eq(variables['RUN_CLANG_FORMAT'], 'yes')
 
     - script: |
         set -e
