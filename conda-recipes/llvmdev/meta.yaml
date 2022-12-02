@@ -56,6 +56,8 @@ requirements:
     - python # [not (armv6l or armv7l or aarch64 or win)]
 
 test:
+  files:
+    - numba-3016.ll
   commands:
     - $PREFIX/bin/llvm-config --libs                         # [not win]
     - $PREFIX/bin/llc -version                               # [not win]
