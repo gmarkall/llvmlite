@@ -1081,6 +1081,15 @@ class TestMCJit(BaseTest, JITWithTMTestMixin):
         return llvm.create_mcjit_compiler(mod, target_machine)
 
 
+class TestOrcLLJIT(BaseTest):
+    def test_create(self):
+        llvm.create_lljit_compiler()
+
+    def test_add_ir_module(self):
+        lljit = llvm.create_lljit_compiler()
+        lljit.add_ir_module(self.module())
+
+
 class TestValueRef(BaseTest):
 
     def test_str(self):
