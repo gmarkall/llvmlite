@@ -416,8 +416,8 @@ LLVMPY_WriteCFG(LLVMValueRef Fval, const char **OutStr, int ShowInst) {
     std::string buffer;
     raw_string_ostream stream(buffer);
     DOTFuncInfo CFGInfo(F, nullptr, nullptr, 0);
-    WriteGraph(stream, &CFGInfo, !ShowInst);
-    *OutStr = LLVMPY_CreateString(stream.str().c_str());
+    //WriteGraph(stream, &CFGInfo, !ShowInst);
+    *OutStr = LLVMPY_CreateString("unimplemented" /*stream.str().c_str()*/);
 }
 
 API_EXPORT(const char *)

@@ -161,8 +161,8 @@ LLVMPY_AddCallGraphDOTPrinterPass(LLVMPassManagerRef PM) {
 
 API_EXPORT(void)
 LLVMPY_AddDotDomPrinterPass(LLVMPassManagerRef PM, bool showBody) {
-    unwrap(PM)->add(showBody ? llvm::createDomPrinterPass()
-                             : llvm::createDomOnlyPrinterPass());
+    //unwrap(PM)->add(showBody ? llvm::createDomPrinterPass()
+    //                         : llvm::createDomOnlyPrinterPass());
 }
 
 API_EXPORT(void)
@@ -172,8 +172,8 @@ LLVMPY_AddGlobalsModRefAAPass(LLVMPassManagerRef PM) {
 
 API_EXPORT(void)
 LLVMPY_AddDotPostDomPrinterPass(LLVMPassManagerRef PM, bool showBody) {
-    unwrap(PM)->add(showBody ? llvm::createPostDomPrinterPass()
-                             : llvm::createPostDomOnlyPrinterPass());
+    //unwrap(PM)->add(showBody ? llvm::createPostDomPrinterPass()
+    //                         : llvm::createPostDomOnlyPrinterPass());
 }
 
 API_EXPORT(void)
@@ -250,7 +250,7 @@ LLVMPY_AddAlwaysInlinerPass(LLVMPassManagerRef PM, bool insertLifetime) {
 
 API_EXPORT(void)
 LLVMPY_AddArgPromotionPass(LLVMPassManagerRef PM, unsigned int maxElements) {
-    unwrap(PM)->add(llvm::createArgumentPromotionPass(maxElements));
+    //unwrap(PM)->add(llvm::createArgumentPromotionPass(maxElements));
 }
 
 API_EXPORT(void)
@@ -340,8 +340,8 @@ LLVMPY_AddLoopUnrollAndJamPass(LLVMPassManagerRef PM) {
 API_EXPORT(void)
 LLVMPY_AddLoopUnswitchPass(LLVMPassManagerRef PM, bool optimizeForSize,
                            bool hasBranchDivergence) {
-    unwrap(PM)->add(
-        createLoopUnswitchPass(optimizeForSize, hasBranchDivergence));
+    //unwrap(PM)->add(
+    //    createLoopUnswitchPass(optimizeForSize, hasBranchDivergence));
 }
 
 API_EXPORT(void)
