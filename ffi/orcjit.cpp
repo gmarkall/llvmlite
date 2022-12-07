@@ -7,6 +7,14 @@
 
 using namespace llvm;
 
+namespace llvm {
+
+inline orc::LLJIT *unwrap(LLVMOrcLLJITRef P) {
+    return reinterpret_cast<orc::LLJIT *>(P);
+}
+
+} // namespace llvm
+
 extern "C" {
 
 API_EXPORT(LLVMOrcLLJITRef)
@@ -38,6 +46,12 @@ LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name)
     LLVMOrcExecutorAddress ea;
     LLVMOrcLLJITLookup(JIT, &ea, name);
     return ea;
+}
+
+API_EXPORT(LLVMTargetDataRef)
+LLVMPY_LLJITGetDataLayout(LLVMOrcLLJITRef JIT)
+{
+    return wrap(&unwrap(JIT)->getDataLayout());
 }
 
 } // extern "C"

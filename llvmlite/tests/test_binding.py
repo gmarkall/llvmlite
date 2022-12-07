@@ -1116,6 +1116,80 @@ class TestOrcLLJIT(BaseTest):
             res = cfunc(2, -5)
             self.assertEqual(-3, res)
 
+    def test_close(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        lljit.close()
+        lljit.close()
+        with self.assertRaises(ctypes.ArgumentError):
+            lljit.lookup('fn')
+
+    def test_with(self):
+        lljit = self.jit(self.module())
+        with lljit:
+            pass
+        with self.assertRaises(RuntimeError):
+            with lljit:
+                pass
+        with self.assertRaises(ctypes.ArgumentError):
+            lljit.lookup('fn')
+
+    def test_module_lifetime(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        lljit.close()
+        mod.close()
+
+    def test_module_lifetime2(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        mod.close()
+        lljit.close()
+
+    def test_add_ir_module(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        with self.assertRaises(KeyError):
+            lljit.add_ir_module(mod)
+        self.assertFalse(mod.closed)
+        lljit.close()
+        self.assertTrue(mod.closed)
+
+    def test_add_module_lifetime(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        mod.close()
+        lljit.close()
+
+    def test_add_module_lifetime2(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        lljit.close()
+        mod.close()
+
+    def test_remove_module(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        lljit.remove_module(mod)
+        with self.assertRaises(KeyError):
+            lljit.remove_module(mod)
+        self.assertFalse(mod.closed)
+        lljit.close()
+        self.assertFalse(mod.closed)
+
+    def test_target_data(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        td = lljit.target_data
+        # A singleton is returned
+        self.assertIs(lljit.target_data, td)
+        str(td)
+        del mod, lljit
+        str(td)
 
     # ---- new tests / bits
 
