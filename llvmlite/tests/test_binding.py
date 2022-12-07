@@ -859,9 +859,9 @@ class TestModuleRef(BaseTest):
         self.assertEqual(cloned.as_bitcode(), m.as_bitcode())
 
 
-class JITTestMixin(object):
+class TestMCJIT(BaseTest):
     """
-    Mixin for ExecutionEngine tests.
+    Test JIT engines created with create_mcjit_compiler().
     """
 
     def get_sum(self, ee, func_name="sum"):
@@ -1043,9 +1043,6 @@ class JITTestMixin(object):
         self.assertEqual(len(notifies), 0)
         self.assertEqual(len(getbuffers), 1)
 
-
-class JITWithTMTestMixin(JITTestMixin):
-
     def test_emit_assembly(self):
         """Test TargetMachineRef.emit_assembly()"""
         target_machine = self.target_machine(jit=True)
@@ -1069,11 +1066,29 @@ class JITWithTMTestMixin(JITTestMixin):
             # Sanity check
             self.assertIn(b"ELF", code_object[:10])
 
+    def test_global_ctors_dtors(self):
+        # test issue #303
+        # (https://github.com/numba/llvmlite/issues/303)
+        mod = self.module(asm_global_ctors)
+        ee = self.jit(mod)
+        ee.finalize_object()
 
-class TestMCJit(BaseTest, JITWithTMTestMixin):
-    """
-    Test JIT engines created with create_mcjit_compiler().
-    """
+        ee.run_static_constructors()
+
+        # global variable should have been initialized
+        ptr_addr = ee.get_global_value_address("A")
+        ptr_t = ctypes.POINTER(ctypes.c_int32)
+        ptr = ctypes.cast(ptr_addr, ptr_t)
+        self.assertEqual(ptr.contents.value, 10)
+
+        foo_addr = ee.get_function_address("foo")
+        foo = ctypes.CFUNCTYPE(ctypes.c_int32)(foo_addr)
+        self.assertEqual(foo(), 12)
+
+        ee.run_static_destructors()
+
+        # destructor should have run
+        self.assertEqual(ptr.contents.value, 20)
 
     def jit(self, mod, target_machine=None):
         if target_machine is None:
@@ -1088,6 +1103,12 @@ class TestOrcLLJIT(BaseTest):
     def test_add_ir_module(self):
         lljit = llvm.create_lljit_compiler()
         lljit.add_ir_module(self.module())
+
+    def jit(self, mod, target_machine=None):
+        if target_machine is not None:
+            print(" - Ignoring target machine - ")
+        lljit = llvm.create_lljit_compiler()
+        lljit.add_ir_module(mod)
 
 
 class TestValueRef(BaseTest):
@@ -1764,31 +1785,6 @@ class TestTypeParsing(BaseTest):
             # Also test constant text repr
             gv.initializer = ir.Constant(typ, [1])
 
-
-class TestGlobalConstructors(TestMCJit):
-    def test_global_ctors_dtors(self):
-        # test issue #303
-        # (https://github.com/numba/llvmlite/issues/303)
-        mod = self.module(asm_global_ctors)
-        ee = self.jit(mod)
-        ee.finalize_object()
-
-        ee.run_static_constructors()
-
-        # global variable should have been initialized
-        ptr_addr = ee.get_global_value_address("A")
-        ptr_t = ctypes.POINTER(ctypes.c_int32)
-        ptr = ctypes.cast(ptr_addr, ptr_t)
-        self.assertEqual(ptr.contents.value, 10)
-
-        foo_addr = ee.get_function_address("foo")
-        foo = ctypes.CFUNCTYPE(ctypes.c_int32)(foo_addr)
-        self.assertEqual(foo(), 12)
-
-        ee.run_static_destructors()
-
-        # destructor should have run
-        self.assertEqual(ptr.contents.value, 20)
 
 
 class TestGlobalVariables(BaseTest):
