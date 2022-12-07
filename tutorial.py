@@ -1,4 +1,4 @@
-from ctypes import CFUNCTYPE, c_double
+from ctypes import CFUNCTYPE, c_double, c_int
 
 import llvmlite.binding as llvm
 
@@ -7,15 +7,15 @@ llvm.initialize_native_target()
 llvm.initialize_native_asmprinter()  # yes, even this one
 
 llvm_ir = """
-   ; ModuleID = "examples/ir_fpadd.py"
+   ; ModuleID = "examples/ir_intadd.py"
    target triple = "unknown-unknown-unknown"
    target datalayout = ""
 
-   define double @"fpadd"(double %".1", double %".2")
+   define i32 @"intadd"(i32 %".1", i32 %".2")
    {
    entry:
-     %"res" = fadd double %".1", %".2"
-     ret double %"res"
+     %"res" = add i32 %".1", %".2"
+     ret i32 %"res"
    }
    """
 
@@ -25,8 +25,8 @@ mod.verify()
 lljit = llvm.create_lljit_compiler()
 lljit.add_ir_module(mod)
 
-func_ptr = lljit.get_function_address('fpadd')
+func_ptr = lljit.get_function_address('intadd')
 
-cfunc = CFUNCTYPE(c_double, c_double, c_double)(func_ptr)
-res = cfunc(1.0, 3.5)
-print("fpadd(...) =", res)
+cfunc = CFUNCTYPE(c_int, c_int, c_int)(func_ptr)
+res = cfunc(1, 4)
+print("intadd(...) =", res)
