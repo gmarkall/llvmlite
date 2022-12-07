@@ -1102,18 +1102,29 @@ class TestOrcLLJIT(BaseTest):
         self.assertTrue(cfptr)
         return CFUNCTYPE(c_int, c_int, c_int)(cfptr)
 
+    def jit(self, mod, target_machine=None):
+        if target_machine is not None:
+            print(" - Ignoring target machine - ")
+        lljit = llvm.create_lljit_compiler()
+        lljit.add_ir_module(mod)
+        return lljit
+
+    def test_run_code(self):
+        mod = self.module()
+        with self.jit(mod) as lljit:
+            cfunc = self.get_sum(lljit)
+            res = cfunc(2, -5)
+            self.assertEqual(-3, res)
+
+
+    # ---- new tests / bits
+
     def test_create(self):
         llvm.create_lljit_compiler()
 
     def test_add_ir_module(self):
         lljit = llvm.create_lljit_compiler()
         lljit.add_ir_module(self.module())
-
-    def jit(self, mod, target_machine=None):
-        if target_machine is not None:
-            print(" - Ignoring target machine - ")
-        lljit = llvm.create_lljit_compiler()
-        lljit.add_ir_module(mod)
 
 
 class TestValueRef(BaseTest):
