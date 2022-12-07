@@ -57,6 +57,14 @@ LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
       tsm);
 }
 
+API_EXPORT(uint64_t)
+LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name)
+{
+    LLVMOrcExecutorAddress ea;
+    LLVMOrcLLJITLookup(JIT, &ea, name);
+    return ea;
+}
+
 API_EXPORT(LLVMOrcThreadSafeModuleRef)
 LLVMPY_CreateThreadSafeModule(LLVMModuleRef module/*, LLVMContextRef context*/)
 {

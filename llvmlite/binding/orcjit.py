@@ -13,6 +13,9 @@ class LLJIT(ffi.ObjectRef):
         ffi.lib.LLVMPY_AddIRModule(self, m)
         m._owned = True
 
+    def get_function_address(self, fn):
+        return ffi.lib.LLVMPY_LLJITLookup(self, fn.encode("ascii"))
+
 
 def create_lljit_compiler():
     """
@@ -36,4 +39,9 @@ ffi.lib.LLVMPY_AddIRModule.argtypes = [
 ]
 
 
+ffi.lib.LLVMPY_LLJITLookup.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+    c_char_p,
+]
+ffi.lib.LLVMPY_LLJITLookup.restype = c_uint64
 
