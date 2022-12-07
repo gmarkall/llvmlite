@@ -1191,6 +1191,28 @@ class TestOrcLLJIT(BaseTest):
         del mod, lljit
         str(td)
 
+    def test_target_data_abi_enquiries(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        td = lljit.target_data
+        gv_i32 = mod.get_global_variable("glob")
+        gv_i8 = mod.get_global_variable("glob_b")
+        gv_struct = mod.get_global_variable("glob_struct")
+        # A global is a pointer, it has the ABI size of a pointer
+        pointer_size = 4 if sys.maxsize < 2 ** 32 else 8
+        for g in (gv_i32, gv_i8, gv_struct):
+            self.assertEqual(td.get_abi_size(g.type), pointer_size)
+
+        self.assertEqual(td.get_pointee_abi_size(gv_i32.type), 4)
+        self.assertEqual(td.get_pointee_abi_alignment(gv_i32.type), 4)
+
+        self.assertEqual(td.get_pointee_abi_size(gv_i8.type), 1)
+        self.assertIn(td.get_pointee_abi_alignment(gv_i8.type), (1, 2, 4))
+
+        self.assertEqual(td.get_pointee_abi_size(gv_struct.type), 24)
+        self.assertIn(td.get_pointee_abi_alignment(gv_struct.type), (4, 8))
+
+
     # ---- new tests / bits
 
     def test_create(self):
