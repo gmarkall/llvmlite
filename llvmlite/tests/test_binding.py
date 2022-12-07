@@ -1097,6 +1097,11 @@ class TestMCJIT(BaseTest):
 
 
 class TestOrcLLJIT(BaseTest):
+    def get_sum(self, lljit, func_name="sum"):
+        cfptr = lljit.lookup(func_name)
+        self.assertTrue(cfptr)
+        return CFUNCTYPE(c_int, c_int, c_int)(cfptr)
+
     def test_create(self):
         llvm.create_lljit_compiler()
 

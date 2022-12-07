@@ -13,7 +13,7 @@ class LLJIT(ffi.ObjectRef):
         ffi.lib.LLVMPY_AddIRModule(self, m)
         m._owned = True
 
-    def get_function_address(self, fn):
+    def lookup(self, fn):
         return ffi.lib.LLVMPY_LLJITLookup(self, fn.encode("ascii"))
 
 
