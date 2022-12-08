@@ -905,9 +905,7 @@ struct RefPrunePass : public FunctionPass {
     }
 
     /**
-     * Check if a basic block is a block which raises, this relies on a
-     * metadata "ret_is_raise" being present the terminator and the
-     * terminator opcode being Instruction::Ret.
+     * Check if a basic block is a block which raises, based on the return value.
      *
      * Parameters:
      *  - bb a basic block
@@ -920,27 +918,68 @@ struct RefPrunePass : public FunctionPass {
 
         // Get the terminator
         auto term = bb->getTerminator();
-        // Get the opcode of the terminator, if it's not a Ret then return false
-        if (term->getOpcode() != Instruction::Ret)
+        // Get the opcode of the terminator, if it's a Ret then check
+        if (term->getOpcode() == Instruction::Ret) {
+            // With one operand
+            if (term->getNumOperands() != 1) {
+                return false;
+            }
+            auto operand = term->getOperand(0);
+            // If the operand is a constant, check if it indicates an exception
+            auto int_operand = dyn_cast<ConstantInt>(operand);
+            if (int_operand && int_operand->isOneValue()) {
+                return true;
+            }
+            // If the operand is a PHI node, check if there is a non-exception
+            // path. We don't know which path we're on, but since the
+            // exceptional path will lookahead, so if there is a non-exceptional
+            // path, we can assume were on it.
+            auto phi_operand = dyn_cast<PHINode>(operand);
+            if (phi_operand) {
+                for (auto& phi_arg_value : phi_operand->incoming_values()) {
+                    auto arg_value = dyn_cast<ConstantInt>(phi_arg_value);
+                    if (arg_value && !arg_value->isOneValue()) {
+                        return false;
+                    }
+                }
+                return true;
+            }
             return false;
-        // Get the metadata on the terminator node
-        auto md = term->getMetadata("ret_is_raise");
-        // If there's no metadata return false (normal or unmarked Ret)
-        if (!md)
+        } else if (term->getOpcode() == Instruction::Br &&
+                   term->getNumOperands() == 1) {
+            // If it's a branch, it might be a common return block
+            auto first =
+                term->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime(true);
+            if (!first) {
+                // Malformed block with no terminal instruction
+                return false;
+            }
+            // Our one and only instruction should be a return
+            if (first->getOpcode() != Instruction::Ret) {
+                return false;
+            }
+            // With one operand
+            if (first->getNumOperands() != 1) {
+                return false;
+            }
+            auto operand = first->getOperand(0);
+            // If the operand is a constant, check if it indicates an exception
+            auto int_operand = dyn_cast<ConstantInt>(operand);
+            if (int_operand && int_operand->isOneValue()) {
+                return true;
+            }
+            // If the operand is a PHI node, check if the path we're on will
+            // yield a value indicating an exception
+            auto phi_operand = dyn_cast<PHINode>(operand);
+            if (phi_operand) {
+                auto arg_value = dyn_cast<ConstantInt>(
+                    phi_operand->getIncomingValueForBlock(bb));
+                return arg_value && arg_value->isOneValue();
+            }
+            // This path doesn't raise
             return false;
-        // If the number of operands on the metadata is not 1 then return false
-        if (md->getNumOperands() != 1)
-            return false;
-        // Fetch the ref to the metadata operand at location 0
-        auto &operand = md->getOperand(0);
-        // and then cast the const as Metadata (Numba sets this as literal 1)
-        auto data = dyn_cast<ConstantAsMetadata>(operand.get());
-        // If dyn_cast failed type check then return false
-        if (!data)
-            return false;
-        // get the value of the casted metadata and then return bool on whether
-        // it is the number one.
-        return data->getValue()->isOneValue();
+        }
+        return false;
     }
 
     /**
