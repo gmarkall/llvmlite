@@ -70,4 +70,31 @@ LLVMPY_LLJITGetDataLayout(LLVMOrcLLJITRef JIT)
     return wrap(&unwrap(JIT)->getDataLayout());
 }
 
+API_EXPORT(void)
+LLVMPY_LLJITDispose(LLVMOrcLLJITRef JIT)
+{
+    LLVMOrcDisposeLLJIT(JIT);
+}
+
+API_EXPORT(void)
+LLVMPY_LLJITRunInitializers(LLVMOrcLLJITRef JIT)
+{
+  auto lljit = unwrap(JIT);
+  auto error = lljit->initialize(lljit->getMainJITDylib());
+
+  if (error)
+    abort();
+}
+
+API_EXPORT(void)
+LLVMPY_LLJITRunDeinitializers(LLVMOrcLLJITRef JIT)
+{
+  auto lljit = unwrap(JIT);
+  auto error = lljit->deinitialize(lljit->getMainJITDylib());
+  
+  if (error)
+    abort();
+}
+
+
 } // extern "C"

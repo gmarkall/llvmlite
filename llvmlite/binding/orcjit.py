@@ -11,8 +11,11 @@ class LLJIT(ffi.ObjectRef):
         ffi.ObjectRef.__init__(self, ptr)
 
     def add_ir_module(self, m):
+        if m in self._modules:
+            raise KeyError("module already added to this engine")
         ffi.lib.LLVMPY_AddIRModule(self, m)
         m._owned = True
+        self._modules.add(m)
 
     def lookup(self, fn):
         return ffi.lib.LLVMPY_LLJITLookup(self, fn.encode("ascii"))
@@ -28,6 +31,30 @@ class LLJIT(ffi.ObjectRef):
         self._td = targets.TargetData(ptr)
         self._td._owned = True
         return self._td
+
+    def run_static_constructors(self):
+        """
+        Run static constructors which initialize module-level static objects.
+        """
+        ffi.lib.LLVMPY_LLJITRunInitializers(self)
+
+    def run_static_destructors(self):
+        """
+        Run static destructors which perform module-level cleanup of static
+        resources.
+        """
+        ffi.lib.LLVMPY_LLJITRunDeinitializers(self)
+
+
+    def _dispose(self):
+        # The modules will be cleaned up by the EE
+        for mod in self._modules:
+            mod.detach()
+        if self._td is not None:
+            self._td.detach()
+        self._modules.clear()
+        self._capi.LLVMPY_LLJITDispose(self)
+
 
 
 def create_lljit_compiler(target_machine):
@@ -68,3 +95,15 @@ ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine.argtypes = [
     POINTER(c_char_p),
 ]
 ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine.restype = ffi.LLVMOrcLLJITRef
+
+ffi.lib.LLVMPY_LLJITDispose.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+]
+
+ffi.lib.LLVMPY_LLJITRunInitializers.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+]
+
+ffi.lib.LLVMPY_LLJITRunDeinitializers.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+]
