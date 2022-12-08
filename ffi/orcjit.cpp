@@ -30,6 +30,22 @@ LLVMPY_CreateLLJITCompiler(const char **OutError) {
     return JIT;
 }
 
+API_EXPORT(LLVMOrcLLJITRef)
+LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm, const char **OutError) {
+    LLVMOrcJITTargetMachineBuilderRef jtmb = LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(tm);
+    LLVMOrcLLJITBuilderRef builder = LLVMOrcCreateLLJITBuilder();
+    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, jtmb);
+    LLVMOrcLLJITRef JIT;
+    auto error = LLVMOrcCreateLLJIT(&JIT, builder);
+
+    if (error) {
+        *OutError = LLVMPY_CreateString("Error creating LLJIT"); //JIT.takeError().getPtr()->message());
+    }  
+    
+    return JIT;
+
+}
+
 API_EXPORT(void)
 LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
   auto llvm_ts_ctx = LLVMOrcCreateNewThreadSafeContext();
