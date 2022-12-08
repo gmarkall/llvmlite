@@ -32,6 +32,20 @@ class LLJIT(ffi.ObjectRef):
         self._td._owned = True
         return self._td
 
+    def run_static_constructors(self):
+        """
+        Run static constructors which initialize module-level static objects.
+        """
+        ffi.lib.LLVMPY_LLJITRunInitializers(self)
+
+    def run_static_destructors(self):
+        """
+        Run static destructors which perform module-level cleanup of static
+        resources.
+        """
+        ffi.lib.LLVMPY_LLJITRunDeinitializers(self)
+
+
     def _dispose(self):
         # The modules will be cleaned up by the EE
         for mod in self._modules:
@@ -78,5 +92,13 @@ ffi.lib.LLVMPY_LLJITGetDataLayout.restype = ffi.LLVMTargetDataRef
 
 
 ffi.lib.LLVMPY_LLJITDispose.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+]
+
+ffi.lib.LLVMPY_LLJITRunInitializers.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+]
+
+ffi.lib.LLVMPY_LLJITRunDeinitializers.argtypes = [
     ffi.LLVMOrcLLJITRef,
 ]

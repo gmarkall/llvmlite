@@ -1212,15 +1212,28 @@ class TestOrcLLJIT(BaseTest):
         self.assertEqual(td.get_pointee_abi_size(gv_struct.type), 24)
         self.assertIn(td.get_pointee_abi_alignment(gv_struct.type), (4, 8))
 
+    def test_global_ctors_dtors(self):
+        # test issue #303
+        # (https://github.com/numba/llvmlite/issues/303)
+        mod = self.module(asm_global_ctors)
+        lljit = self.jit(mod)
 
-    # ---- new tests / bits
+        lljit.run_static_constructors()
 
-    def test_create(self):
-        llvm.create_lljit_compiler()
+        # global variable should have been initialized
+        ptr_addr = lljit.lookup("A")
+        ptr_t = ctypes.POINTER(ctypes.c_int32)
+        ptr = ctypes.cast(ptr_addr, ptr_t)
+        self.assertEqual(ptr.contents.value, 10)
 
-    def test_add_ir_module(self):
-        lljit = llvm.create_lljit_compiler()
-        lljit.add_ir_module(self.module())
+        foo_addr = lljit.lookup("foo")
+        foo = ctypes.CFUNCTYPE(ctypes.c_int32)(foo_addr)
+        self.assertEqual(foo(), 12)
+
+        lljit.run_static_destructors()
+
+        # destructor should have run
+        self.assertEqual(ptr.contents.value, 20)
 
 
 class TestValueRef(BaseTest):
