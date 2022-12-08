@@ -54,4 +54,10 @@ LLVMPY_LLJITGetDataLayout(LLVMOrcLLJITRef JIT)
     return wrap(&unwrap(JIT)->getDataLayout());
 }
 
+API_EXPORT(void)
+LLVMPY_LLJITDispose(LLVMOrcLLJITRef JIT)
+{
+    LLVMOrcDisposeLLJIT(JIT);
+}
+
 } // extern "C"
