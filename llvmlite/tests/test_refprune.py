@@ -456,7 +456,8 @@ bb_C:
 
     def test_fanout_raise_2(self):
         mod, stats = self.check(self.fanout_raise_2)
-        self.assertEqual(stats.fanout_raise, 0)
+        # Change in behaviour: ignore bad metadata
+        self.assertEqual(stats.fanout_raise, 2)
 
     fanout_raise_3 = r"""
 define i32 @main(i8* %ptr, i1 %cond) {
@@ -494,6 +495,28 @@ bb_C:
     def test_fanout_raise_4(self):
         mod, stats = self.check(self.fanout_raise_4)
         self.assertEqual(stats.fanout_raise, 0)
+
+    fanout_raise_5 = r"""
+define i32 @main(i8* %ptr, i1 %cond) {
+bb_A:
+    call void @NRT_incref(i8* %ptr)
+    br i1 %cond, label %bb_B, label %bb_C
+bb_B:
+    call void @NRT_decref(i8* %ptr)
+    br label %common.ret
+bb_C:
+    br label %common.ret       ; pretend we throw an exception
+common.ret:
+    %common.ret.op = phi i32 [ 0, %bb_B ], [ 1, %bb_C ]
+    ret i32 %common.ret.op
+}
+
+!0 = !{i32 1}
+"""
+
+    def test_fanout_raise_5(self):
+        mod, stats = self.check(self.fanout_raise_5)
+        self.assertEqual(stats.fanout_raise, 2)
 
 
 if __name__ == '__main__':
