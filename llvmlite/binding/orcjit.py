@@ -57,15 +57,15 @@ class LLJIT(ffi.ObjectRef):
 
 
 
-def create_lljit_compiler():
+def create_lljit_compiler(target_machine):
     """
     Create an LLJIT instance
     """
     with ffi.OutputString() as outerr:
-        lljit = ffi.lib.LLVMPY_CreateLLJITCompiler(outerr)
+    #    lljit = ffi.lib.LLVMPY_CreateLLJITCompiler(outerr)
+        lljit = ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine(target_machine, outerr)
         if not lljit:
             raise RuntimeError(str(outerr))
-
     return LLJIT(lljit)
 
 ffi.lib.LLVMPY_CreateLLJITCompiler.argtypes = [
@@ -90,6 +90,11 @@ ffi.lib.LLVMPY_LLJITGetDataLayout.argtypes = [
 ]
 ffi.lib.LLVMPY_LLJITGetDataLayout.restype = ffi.LLVMTargetDataRef
 
+ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine.argtypes = [
+    ffi.LLVMTargetMachineRef,
+    POINTER(c_char_p),
+]
+ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine.restype = ffi.LLVMOrcLLJITRef
 
 ffi.lib.LLVMPY_LLJITDispose.argtypes = [
     ffi.LLVMOrcLLJITRef,
