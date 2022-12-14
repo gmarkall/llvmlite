@@ -4,6 +4,7 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/Orc.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 
 using namespace llvm;
 
@@ -42,6 +43,14 @@ LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm, const char 
         *OutError = LLVMPY_CreateString("Error creating LLJIT"); //JIT.takeError().getPtr()->message());
     }  
     
+    auto lljit = unwrap(JIT);
+    auto &JD = lljit->getMainJITDylib();
+    auto DLSGOrErr = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
+    if (DLSGOrErr)
+      JD.addGenerator(std::move(*DLSGOrErr));
+    else
+      abort();
+
     return JIT;
 
 }
@@ -96,5 +105,26 @@ LLVMPY_LLJITRunDeinitializers(LLVMOrcLLJITRef JIT)
     abort();
 }
 
+API_EXPORT(void)
+LLVMPY_LLJITDefineSymbol(LLVMOrcLLJITRef JIT, const char *name, void *addr) {
+  auto lljit = unwrap(JIT);
+  auto &JD = lljit->getMainJITDylib();
+  orc::SymbolStringPtr mangled = lljit->mangleAndIntern(name);
+  //auto map = orc::SymbolMap({{mangled, addr}});
+  //map[mangled] = addr;
+  //auto symbols = orc::absoluteSymbols({{mangled, pointerToJITTargetAddress(addr)}});
+  //JD.define(symbols);
+  //    orc::absoluteSymbols({
+  //      map
+   //   }));
+  JITEvaluatedSymbol symbol = JITEvaluatedSymbol::fromPointer(addr);
+  auto error = JD.define(
+      orc::absoluteSymbols({
+        {mangled, symbol}
+      }));
+
+  if (error)
+    abort();
+}
 
 } // extern "C"
