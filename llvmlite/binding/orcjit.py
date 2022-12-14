@@ -3,6 +3,7 @@ from ctypes import (POINTER, c_char_p, c_bool, c_void_p,
                     py_object, Structure)
 
 from llvmlite.binding import ffi, targets, object_file
+from llvmlite.binding.common import _encode_string
 
 class LLJIT(ffi.ObjectRef):
     def __init__(self, ptr):
@@ -45,6 +46,9 @@ class LLJIT(ffi.ObjectRef):
         """
         ffi.lib.LLVMPY_LLJITRunDeinitializers(self)
 
+    def define_symbol(self, name, address):
+        ffi.lib.LLVMPY_LLJITDefineSymbol(self, _encode_string(name), c_void_p(address))
+
 
     def _dispose(self):
         # The modules will be cleaned up by the EE
@@ -54,7 +58,6 @@ class LLJIT(ffi.ObjectRef):
             self._td.detach()
         self._modules.clear()
         self._capi.LLVMPY_LLJITDispose(self)
-
 
 
 def create_lljit_compiler(target_machine=None):
@@ -68,7 +71,26 @@ def create_lljit_compiler(target_machine=None):
             lljit = ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine(target_machine, outerr)
         if not lljit:
             raise RuntimeError(str(outerr))
-    return LLJIT(lljit)
+
+    pylljit = LLJIT(lljit)
+
+    for name, address in _known_symbols.items():
+        pylljit.define_symbol(name, address)
+
+    return pylljit
+
+
+_known_symbols = {}
+
+
+def define_symbol(name, address):
+    """
+    Register the *address* of global symbol *name*.  This will make
+    it usable (e.g. callable) from LLVM-compiled functions.
+    """
+    _known_symbols[name] = address
+
+
 
 ffi.lib.LLVMPY_CreateLLJITCompiler.argtypes = [
     POINTER(c_char_p),
@@ -108,4 +130,11 @@ ffi.lib.LLVMPY_LLJITRunInitializers.argtypes = [
 
 ffi.lib.LLVMPY_LLJITRunDeinitializers.argtypes = [
     ffi.LLVMOrcLLJITRef,
+]
+
+
+ffi.lib.LLVMPY_LLJITDefineSymbol.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+    c_char_p,
+    c_void_p,
 ]
