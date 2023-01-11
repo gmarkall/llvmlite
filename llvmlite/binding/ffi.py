@@ -35,6 +35,7 @@ LLVMTypesIterator = _make_opaque_ref("LLVMTypesIterator")
 LLVMObjectCacheRef = _make_opaque_ref("LLVMObjectCache")
 LLVMObjectFileRef = _make_opaque_ref("LLVMObjectFile")
 LLVMSectionIteratorRef = _make_opaque_ref("LLVMSectionIterator")
+LLVMOrcLLJITRef = _make_opaque_ref("LLVMOrcLLJITRef")
 
 
 class _LLVMLock:

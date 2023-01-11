@@ -859,9 +859,9 @@ class TestModuleRef(BaseTest):
         self.assertEqual(cloned.as_bitcode(), m.as_bitcode())
 
 
-class JITTestMixin(object):
+class TestMCJIT(BaseTest):
     """
-    Mixin for ExecutionEngine tests.
+    Test JIT engines created with create_mcjit_compiler().
     """
 
     def get_sum(self, ee, func_name="sum"):
@@ -1043,9 +1043,6 @@ class JITTestMixin(object):
         self.assertEqual(len(notifies), 0)
         self.assertEqual(len(getbuffers), 1)
 
-
-class JITWithTMTestMixin(JITTestMixin):
-
     def test_emit_assembly(self):
         """Test TargetMachineRef.emit_assembly()"""
         target_machine = self.target_machine(jit=True)
@@ -1069,16 +1066,204 @@ class JITWithTMTestMixin(JITTestMixin):
             # Sanity check
             self.assertIn(b"ELF", code_object[:10])
 
+    def test_global_ctors_dtors(self):
+        # test issue #303
+        # (https://github.com/numba/llvmlite/issues/303)
+        mod = self.module(asm_global_ctors)
+        ee = self.jit(mod)
+        ee.finalize_object()
 
-class TestMCJit(BaseTest, JITWithTMTestMixin):
-    """
-    Test JIT engines created with create_mcjit_compiler().
-    """
+        ee.run_static_constructors()
+
+        # global variable should have been initialized
+        ptr_addr = ee.get_global_value_address("A")
+        ptr_t = ctypes.POINTER(ctypes.c_int32)
+        ptr = ctypes.cast(ptr_addr, ptr_t)
+        self.assertEqual(ptr.contents.value, 10)
+
+        foo_addr = ee.get_function_address("foo")
+        foo = ctypes.CFUNCTYPE(ctypes.c_int32)(foo_addr)
+        self.assertEqual(foo(), 12)
+
+        ee.run_static_destructors()
+
+        # destructor should have run
+        self.assertEqual(ptr.contents.value, 20)
 
     def jit(self, mod, target_machine=None):
         if target_machine is None:
             target_machine = self.target_machine(jit=True)
         return llvm.create_mcjit_compiler(mod, target_machine)
+
+
+class TestOrcLLJIT(BaseTest):
+    def get_sum(self, lljit, func_name="sum"):
+        cfptr = lljit.lookup(func_name)
+        self.assertTrue(cfptr)
+        return CFUNCTYPE(c_int, c_int, c_int)(cfptr)
+
+    def jit(self, mod, target_machine=None):
+        if target_machine is not None:
+            msg = "Specifying target_machine causes a segfault"
+            raise NotImplementedError(msg)
+        lljit = llvm.create_lljit_compiler()
+        lljit.add_ir_module(mod)
+        return lljit
+
+    def test_run_code(self):
+        mod = self.module()
+        with self.jit(mod) as lljit:
+            cfunc = self.get_sum(lljit)
+            res = cfunc(2, -5)
+            self.assertEqual(-3, res)
+
+    def test_close(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        lljit.close()
+        lljit.close()
+        with self.assertRaises(ctypes.ArgumentError):
+            lljit.lookup('fn')
+
+    def test_with(self):
+        lljit = self.jit(self.module())
+        with lljit:
+            pass
+        with self.assertRaises(RuntimeError):
+            with lljit:
+                pass
+        with self.assertRaises(ctypes.ArgumentError):
+            lljit.lookup('fn')
+
+    def test_module_lifetime(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        lljit.close()
+        mod.close()
+
+    def test_module_lifetime2(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        mod.close()
+        lljit.close()
+
+    def test_add_ir_module(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        with self.assertRaises(KeyError):
+            lljit.add_ir_module(mod)
+        self.assertFalse(mod.closed)
+        lljit.close()
+        self.assertTrue(mod.closed)
+
+    def test_add_module_lifetime(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        mod.close()
+        lljit.close()
+
+    def test_add_module_lifetime2(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        lljit.close()
+        mod.close()
+
+    def test_remove_module(self):
+        lljit = self.jit(self.module())
+        mod = self.module(asm_mul)
+        lljit.add_ir_module(mod)
+        lljit.remove_module(mod)
+        with self.assertRaises(KeyError):
+            lljit.remove_module(mod)
+        self.assertFalse(mod.closed)
+        lljit.close()
+        self.assertFalse(mod.closed)
+
+    def test_target_data(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        td = lljit.target_data
+        # A singleton is returned
+        self.assertIs(lljit.target_data, td)
+        str(td)
+        del mod, lljit
+        str(td)
+
+    def test_target_data_abi_enquiries(self):
+        mod = self.module()
+        lljit = self.jit(mod)
+        td = lljit.target_data
+        gv_i32 = mod.get_global_variable("glob")
+        gv_i8 = mod.get_global_variable("glob_b")
+        gv_struct = mod.get_global_variable("glob_struct")
+        # A global is a pointer, it has the ABI size of a pointer
+        pointer_size = 4 if sys.maxsize < 2 ** 32 else 8
+        for g in (gv_i32, gv_i8, gv_struct):
+            self.assertEqual(td.get_abi_size(g.type), pointer_size)
+
+        self.assertEqual(td.get_pointee_abi_size(gv_i32.type), 4)
+        self.assertEqual(td.get_pointee_abi_alignment(gv_i32.type), 4)
+
+        self.assertEqual(td.get_pointee_abi_size(gv_i8.type), 1)
+        self.assertIn(td.get_pointee_abi_alignment(gv_i8.type), (1, 2, 4))
+
+        self.assertEqual(td.get_pointee_abi_size(gv_struct.type), 24)
+        self.assertIn(td.get_pointee_abi_alignment(gv_struct.type), (4, 8))
+
+    def test_object_cache_notify(self):
+        raise NotImplementedError('Object cache not implemented for LLJIT')
+
+    def test_object_cache_getbuffer(self):
+        raise NotImplementedError('Object cache not implemented for LLJIT')
+
+    def test_emit_assembly(self):
+        """Test TargetMachineRef.emit_assembly()"""
+        target_machine = self.target_machine(jit=True)
+        mod = self.module()
+        lljit = self.jit(mod, target_machine)  # noqa F841 # Keeps pointers alive
+        raw_asm = target_machine.emit_assembly(mod)
+        self.assertIn("sum", raw_asm)
+        target_machine.set_asm_verbosity(True)
+        raw_asm_verbose = target_machine.emit_assembly(mod)
+        self.assertIn("sum", raw_asm)
+        self.assertNotEqual(raw_asm, raw_asm_verbose)
+
+    def test_emit_object(self):
+        """Test TargetMachineRef.emit_object()"""
+        target_machine = self.target_machine(jit=True)
+        mod = self.module()
+        lljit = self.jit(mod, target_machine)  # noqa F841 # Keeps pointers alive
+        code_object = target_machine.emit_object(mod)
+        self.assertIsInstance(code_object, bytes)
+        if sys.platform.startswith('linux'):
+            # Sanity check
+            self.assertIn(b"ELF", code_object[:10])
+
+    def test_global_ctors_dtors(self):
+        # test issue #303
+        # (https://github.com/numba/llvmlite/issues/303)
+        mod = self.module(asm_global_ctors)
+        lljit = self.jit(mod)
+
+        lljit.run_static_constructors()
+
+        # global variable should have been initialized
+        ptr_addr = lljit.lookup("A")
+        ptr_t = ctypes.POINTER(ctypes.c_int32)
+        ptr = ctypes.cast(ptr_addr, ptr_t)
+        self.assertEqual(ptr.contents.value, 10)
+
+        foo_addr = lljit.lookup("foo")
+        foo = ctypes.CFUNCTYPE(ctypes.c_int32)(foo_addr)
+        self.assertEqual(foo(), 12)
+
+        lljit.run_static_destructors()
+
+        # destructor should have run
+        self.assertEqual(ptr.contents.value, 20)
 
 
 class TestValueRef(BaseTest):
@@ -1755,31 +1940,6 @@ class TestTypeParsing(BaseTest):
             # Also test constant text repr
             gv.initializer = ir.Constant(typ, [1])
 
-
-class TestGlobalConstructors(TestMCJit):
-    def test_global_ctors_dtors(self):
-        # test issue #303
-        # (https://github.com/numba/llvmlite/issues/303)
-        mod = self.module(asm_global_ctors)
-        ee = self.jit(mod)
-        ee.finalize_object()
-
-        ee.run_static_constructors()
-
-        # global variable should have been initialized
-        ptr_addr = ee.get_global_value_address("A")
-        ptr_t = ctypes.POINTER(ctypes.c_int32)
-        ptr = ctypes.cast(ptr_addr, ptr_t)
-        self.assertEqual(ptr.contents.value, 10)
-
-        foo_addr = ee.get_function_address("foo")
-        foo = ctypes.CFUNCTYPE(ctypes.c_int32)(foo_addr)
-        self.assertEqual(foo(), 12)
-
-        ee.run_static_destructors()
-
-        # destructor should have run
-        self.assertEqual(ptr.contents.value, 20)
 
 
 class TestGlobalVariables(BaseTest):
