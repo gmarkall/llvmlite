@@ -252,13 +252,13 @@ class PassManager(ffi.ObjectRef):
         """  # noqa E501
         ffi.lib.LLVMPY_AddAlwaysInlinerPass(self, insert_lifetime)
 
-    def add_arg_promotion_pass(self, max_elements=3):
-        """
-        See https://llvm.org/docs/Passes.html#argpromotion-promote-by-reference-arguments-to-scalars
+    #def add_arg_promotion_pass(self, max_elements=3):
+    #    """
+    #    See https://llvm.org/docs/Passes.html#argpromotion-promote-by-reference-arguments-to-scalars
 
-        LLVM 11+: `llvm::createArgumentPromotionPass`
-        """  # noqa E501
-        ffi.lib.LLVMPY_AddArgPromotionPass(self, max_elements)
+    #    LLVM 11+: `llvm::createArgumentPromotionPass`
+    #    """  # noqa E501
+    #    ffi.lib.LLVMPY_AddArgPromotionPass(self, max_elements)
 
     def add_break_critical_edges_pass(self):
         """
@@ -459,17 +459,17 @@ class PassManager(ffi.ObjectRef):
         """  # noqa E501
         ffi.lib.LLVMPY_AddLoopUnrollAndJamPass(self)
 
-    def add_loop_unswitch_pass(self,
-                               optimize_for_size=False,
-                               has_branch_divergence=False):
-        """
-        See https://llvm.org/docs/Passes.html#loop-unswitch-unswitch-loops
-
-        LLVM 11+: `llvm::createLoopUnswitchPass`
-        """  # noqa E501
-        ffi.lib.LLVMPY_AddLoopUnswitchPass(self,
-                                           optimize_for_size,
-                                           has_branch_divergence)
+#    def add_loop_unswitch_pass(self,
+#                               optimize_for_size=False,
+#                               has_branch_divergence=False):
+#        """
+#        See https://llvm.org/docs/Passes.html#loop-unswitch-unswitch-loops
+#
+#        LLVM 11+: `llvm::createLoopUnswitchPass`
+#        """  # noqa E501
+#        ffi.lib.LLVMPY_AddLoopUnswitchPass(self,
+#                                           optimize_for_size,
+#                                           has_branch_divergence)
 
     def add_lower_atomic_pass(self):
         """
@@ -855,7 +855,7 @@ ffi.lib.LLVMPY_AddRegionInfoPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddScalarEvolutionAAPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddAggressiveDCEPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddAlwaysInlinerPass.argtypes = [ffi.LLVMPassManagerRef, c_bool]
-ffi.lib.LLVMPY_AddArgPromotionPass.argtypes = [ffi.LLVMPassManagerRef, c_uint]
+#ffi.lib.LLVMPY_AddArgPromotionPass.argtypes = [ffi.LLVMPassManagerRef, c_uint]
 ffi.lib.LLVMPY_AddBreakCriticalEdgesPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddDeadStoreEliminationPass.argtypes = [
     ffi.LLVMPassManagerRef]
@@ -872,10 +872,10 @@ ffi.lib.LLVMPY_AddLoopStrengthReducePass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddLoopSimplificationPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddLoopUnrollPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddLoopUnrollAndJamPass.argtypes = [ffi.LLVMPassManagerRef]
-ffi.lib.LLVMPY_AddLoopUnswitchPass.argtypes = [
-    ffi.LLVMPassManagerRef,
-    c_bool,
-    c_bool]
+#ffi.lib.LLVMPY_AddLoopUnswitchPass.argtypes = [
+#    ffi.LLVMPassManagerRef,
+#    c_bool,
+#    c_bool]
 ffi.lib.LLVMPY_AddLowerAtomicPass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddLowerInvokePass.argtypes = [ffi.LLVMPassManagerRef]
 ffi.lib.LLVMPY_AddLowerSwitchPass.argtypes = [ffi.LLVMPassManagerRef]

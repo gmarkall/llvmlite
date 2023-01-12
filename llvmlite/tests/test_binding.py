@@ -952,6 +952,7 @@ class JITTestMixin(object):
         str(td)
 
     def test_target_data_abi_enquiries(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         mod = self.module()
         ee = self.jit(mod)
         td = ee.target_data
@@ -1151,6 +1152,7 @@ class TestValueRef(BaseTest):
         self.assertIsInstance(tp, llvm.TypeRef)
 
     def test_type_name(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         mod = self.module()
         glob = mod.get_global_variable("glob")
         tp = glob.type
@@ -1326,6 +1328,7 @@ class TestTargetData(BaseTest):
         self.assertEqual(td.get_abi_size(glob.type), 8)
 
     def test_get_pointee_abi_size(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         td = self.target_data()
 
         glob = self.glob()
@@ -1335,6 +1338,7 @@ class TestTargetData(BaseTest):
         self.assertEqual(td.get_pointee_abi_size(glob.type), 24)
 
     def test_get_struct_element_offset(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         td = self.target_data()
         glob = self.glob("glob_struct")
 

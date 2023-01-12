@@ -2213,6 +2213,7 @@ class TestTypes(TestBase):
         check_index_type(tp)
 
     def test_abi_size(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         td = llvm.create_target_data("e-m:e-i64:64-f80:128-n8:16:32:64-S128")
 
         def check(tp, expected):
@@ -2225,6 +2226,7 @@ class TestTypes(TestBase):
         check(ir.LiteralStructType((dbl, flt, flt)), 16)
 
     def test_abi_alignment(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         td = llvm.create_target_data("e-m:e-i64:64-f80:128-n8:16:32:64-S128")
 
         def check(tp, expected):
@@ -2249,6 +2251,7 @@ class TestTypes(TestBase):
         self.assertNotEqual(oldstr, str(module))
 
     def test_target_data_non_default_context(self):
+        self.fail("Failing due to LLVM 15 assertion fail")
         context = ir.Context()
         mytype = context.get_identified_type("MyType")
         mytype.elements = [ir.IntType(32)]
