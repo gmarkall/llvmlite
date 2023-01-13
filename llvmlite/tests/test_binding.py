@@ -1103,10 +1103,7 @@ class TestOrcLLJIT(BaseTest):
         return CFUNCTYPE(c_int, c_int, c_int)(cfptr)
 
     def jit(self, mod, target_machine=None):
-        if target_machine is not None:
-            msg = "Specifying target_machine causes a segfault"
-            raise NotImplementedError(msg)
-        lljit = llvm.create_lljit_compiler()
+        lljit = llvm.create_lljit_compiler(target_machine)
         lljit.add_ir_module(mod)
         return lljit
 
