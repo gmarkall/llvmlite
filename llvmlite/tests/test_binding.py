@@ -1220,7 +1220,7 @@ class TestOrcLLJIT(BaseTest):
         """Test TargetMachineRef.emit_assembly()"""
         target_machine = self.target_machine(jit=True)
         mod = self.module()
-        lljit = self.jit(mod, target_machine)  # noqa F841 # Keeps pointers alive
+        lljit = self.jit(mod, target_machine)  # noqa F841 # Keeps pointers alive (questionable comment in this context)
         raw_asm = target_machine.emit_assembly(mod)
         self.assertIn("sum", raw_asm)
         target_machine.set_asm_verbosity(True)
@@ -1232,7 +1232,7 @@ class TestOrcLLJIT(BaseTest):
         """Test TargetMachineRef.emit_object()"""
         target_machine = self.target_machine(jit=True)
         mod = self.module()
-        lljit = self.jit(mod, target_machine)  # noqa F841 # Keeps pointers alive
+        lljit = self.jit(mod, target_machine)  # noqa F841 # Keeps pointers alive (questionable comment in this context)
         code_object = target_machine.emit_object(mod)
         self.assertIsInstance(code_object, bytes)
         if sys.platform.startswith('linux'):

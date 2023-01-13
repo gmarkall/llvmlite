@@ -32,11 +32,42 @@ LLVMPY_CreateLLJITCompiler(const char **OutError) {
     return JIT;
 }
 
+inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
+    return reinterpret_cast<TargetMachine *>(TM);
+}
+
+
+inline LLVMOrcJITTargetMachineBuilderRef wrap(orc::JITTargetMachineBuilder *JTMB) {
+    return reinterpret_cast<LLVMOrcJITTargetMachineBuilderRef>(JTMB);
+}
+
+
+// Like LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine but doesn't destroy the target machine.
+LLVMOrcJITTargetMachineBuilderRef
+create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {   
+    auto *TemplateTM = unwrap(TM);     
+       
+    auto JTMB =     
+        std::make_unique<orc::JITTargetMachineBuilder>(TemplateTM->getTargetTriple());     
+       
+    (*JTMB)     
+        .setCPU(TemplateTM->getTargetCPU().str())     
+        .setRelocationModel(TemplateTM->getRelocationModel())     
+        .setCodeModel(TemplateTM->getCodeModel())     
+        .setCodeGenOptLevel(TemplateTM->getOptLevel())     
+        .setFeatures(TemplateTM->getTargetFeatureString())     
+        .setOptions(TemplateTM->Options);     
+       
+    //LLVMDisposeTargetMachine(TM);     
+       
+    return wrap(JTMB.release());   
+}
+
 API_EXPORT(LLVMOrcLLJITRef)
 LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm,
                                             const char **OutError) {
     LLVMOrcJITTargetMachineBuilderRef jtmb =
-        LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine(tm);
+        create_jit_target_machine_builder_from_target_machine(tm);
     LLVMOrcLLJITBuilderRef builder = LLVMOrcCreateLLJITBuilder();
     LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, jtmb);
     LLVMOrcLLJITRef JIT;
