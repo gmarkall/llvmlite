@@ -69,7 +69,6 @@ def create_lljit_compiler(target_machine=None):
             lljit = ffi.lib.LLVMPY_CreateLLJITCompiler(outerr)
         else:
             lljit = ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine(target_machine, outerr)
-            target_machine._owned = True
         if not lljit:
             raise RuntimeError(str(outerr))
 
