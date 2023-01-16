@@ -7,11 +7,12 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 using namespace llvm;
+using namespace llvm::orc;
 
 namespace llvm {
 
-inline orc::LLJIT *unwrap(LLVMOrcLLJITRef P) {
-    return reinterpret_cast<orc::LLJIT *>(P);
+inline LLJIT *unwrap(LLVMOrcLLJITRef P) {
+    return reinterpret_cast<LLJIT *>(P);
 }
 
 } // namespace llvm
@@ -37,7 +38,7 @@ inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
 }
 
 
-inline LLVMOrcJITTargetMachineBuilderRef wrap(orc::JITTargetMachineBuilder *JTMB) {
+inline LLVMOrcJITTargetMachineBuilderRef wrap(JITTargetMachineBuilder *JTMB) {
     return reinterpret_cast<LLVMOrcJITTargetMachineBuilderRef>(JTMB);
 }
 
@@ -48,7 +49,7 @@ create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {
     auto *TemplateTM = unwrap(TM);     
        
     auto JTMB =     
-        std::make_unique<orc::JITTargetMachineBuilder>(TemplateTM->getTargetTriple());     
+        std::make_unique<JITTargetMachineBuilder>(TemplateTM->getTargetTriple());
        
     (*JTMB)     
         .setCPU(TemplateTM->getTargetCPU().str())     
@@ -81,7 +82,7 @@ LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm,
     auto lljit = unwrap(JIT);
     auto &JD = lljit->getMainJITDylib();
     auto DLSGOrErr =
-        orc::DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
+        DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
     if (DLSGOrErr)
         JD.addGenerator(std::move(*DLSGOrErr));
     else
@@ -135,9 +136,9 @@ API_EXPORT(void)
 LLVMPY_LLJITDefineSymbol(LLVMOrcLLJITRef JIT, const char *name, void *addr) {
     auto lljit = unwrap(JIT);
     auto &JD = lljit->getMainJITDylib();
-    orc::SymbolStringPtr mangled = lljit->mangleAndIntern(name);
+    SymbolStringPtr mangled = lljit->mangleAndIntern(name);
     JITEvaluatedSymbol symbol = JITEvaluatedSymbol::fromPointer(addr);
-    auto error = JD.define(orc::absoluteSymbols({{mangled, symbol}}));
+    auto error = JD.define(absoluteSymbols({{mangled, symbol}}));
 
     if (error)
         abort();
