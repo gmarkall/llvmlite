@@ -95,6 +95,7 @@ LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
     auto llvm_ts_ctx = LLVMOrcCreateNewThreadSafeContext();
     auto tsm = LLVMOrcCreateNewThreadSafeModule(M, llvm_ts_ctx);
     LLVMOrcLLJITAddLLVMIRModule(JIT, LLVMOrcLLJITGetMainJITDylib(JIT), tsm);
+    LLVMOrcDisposeThreadSafeContext(llvm_ts_ctx);
 }
 
 API_EXPORT(uint64_t)
