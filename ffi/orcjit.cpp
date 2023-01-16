@@ -9,10 +9,7 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-
-inline LLJIT *unwrap(LLVMOrcLLJITRef P) {
-    return reinterpret_cast<LLJIT *>(P);
-}
+inline LLJIT *unwrap(LLVMOrcLLJITRef P) { return reinterpret_cast<LLJIT *>(P); }
 
 inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
     return reinterpret_cast<TargetMachine *>(TM);
@@ -22,26 +19,25 @@ inline LLVMOrcJITTargetMachineBuilderRef wrap(JITTargetMachineBuilder *JTMB) {
     return reinterpret_cast<LLVMOrcJITTargetMachineBuilderRef>(JTMB);
 }
 
-
-// Like LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine but doesn't destroy the target machine.
+// Like LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine but doesn't
+// destroy the target machine.
 static LLVMOrcJITTargetMachineBuilderRef
-create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {   
-    auto *TemplateTM = unwrap(TM);     
-       
-    auto JTMB =     
-        std::make_unique<JITTargetMachineBuilder>(TemplateTM->getTargetTriple());
-       
-    (*JTMB)     
-        .setCPU(TemplateTM->getTargetCPU().str())     
-        .setRelocationModel(TemplateTM->getRelocationModel())     
-        .setCodeModel(TemplateTM->getCodeModel())     
-        .setCodeGenOptLevel(TemplateTM->getOptLevel())     
-        .setFeatures(TemplateTM->getTargetFeatureString())     
-        .setOptions(TemplateTM->Options);     
-       
-    return wrap(JTMB.release());   
-}
+create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {
+    auto *TemplateTM = unwrap(TM);
 
+    auto JTMB = std::make_unique<JITTargetMachineBuilder>(
+        TemplateTM->getTargetTriple());
+
+    (*JTMB)
+        .setCPU(TemplateTM->getTargetCPU().str())
+        .setRelocationModel(TemplateTM->getRelocationModel())
+        .setCodeModel(TemplateTM->getCodeModel())
+        .setCodeGenOptLevel(TemplateTM->getOptLevel())
+        .setFeatures(TemplateTM->getTargetFeatureString())
+        .setOptions(TemplateTM->Options);
+
+    return wrap(JTMB.release());
+}
 
 extern "C" {
 
@@ -51,7 +47,7 @@ LLVMPY_CreateLLJITCompiler(const char **OutError) {
     auto error = LLVMOrcCreateLLJIT(&JIT, nullptr);
 
     if (error) {
-        char* message = LLVMGetErrorMessage(error);
+        char *message = LLVMGetErrorMessage(error);
         *OutError = LLVMPY_CreateString(message);
     }
 
@@ -69,18 +65,17 @@ LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm,
     auto error = LLVMOrcCreateLLJIT(&JIT, builder);
 
     if (error) {
-        char* message = LLVMGetErrorMessage(error);
+        char *message = LLVMGetErrorMessage(error);
         *OutError = LLVMPY_CreateString(message);
         return nullptr;
     }
 
     // FIXME: This needs moving into a separate function with its own Python API
-    // and unit testing. It enables looking up symbols in the current process when
-    // JIT linking.
+    // and unit testing. It enables looking up symbols in the current process
+    // when JIT linking.
     auto lljit = unwrap(JIT);
     auto &JD = lljit->getMainJITDylib();
-    auto DLSGOrErr =
-        DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
+    auto DLSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
     if (DLSGOrErr)
         JD.addGenerator(std::move(*DLSGOrErr));
     else
