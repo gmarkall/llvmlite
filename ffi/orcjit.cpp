@@ -9,34 +9,14 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-namespace llvm {
 
 inline LLJIT *unwrap(LLVMOrcLLJITRef P) {
     return reinterpret_cast<LLJIT *>(P);
 }
 
-} // namespace llvm
-
-extern "C" {
-
-API_EXPORT(LLVMOrcLLJITRef)
-LLVMPY_CreateLLJITCompiler(const char **OutError) {
-    auto builder = LLVMOrcCreateLLJITBuilder();
-    LLVMOrcLLJITRef JIT;
-    auto error = LLVMOrcCreateLLJIT(&JIT, builder);
-
-    if (error) {
-        *OutError = LLVMPY_CreateString(
-            "Error creating LLJIT"); // JIT.takeError().getPtr()->message());
-    }
-
-    return JIT;
-}
-
 inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
     return reinterpret_cast<TargetMachine *>(TM);
 }
-
 
 inline LLVMOrcJITTargetMachineBuilderRef wrap(JITTargetMachineBuilder *JTMB) {
     return reinterpret_cast<LLVMOrcJITTargetMachineBuilderRef>(JTMB);
@@ -44,7 +24,7 @@ inline LLVMOrcJITTargetMachineBuilderRef wrap(JITTargetMachineBuilder *JTMB) {
 
 
 // Like LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine but doesn't destroy the target machine.
-LLVMOrcJITTargetMachineBuilderRef
+static LLVMOrcJITTargetMachineBuilderRef
 create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {   
     auto *TemplateTM = unwrap(TM);     
        
@@ -59,9 +39,23 @@ create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {
         .setFeatures(TemplateTM->getTargetFeatureString())     
         .setOptions(TemplateTM->Options);     
        
-    //LLVMDisposeTargetMachine(TM);     
-       
     return wrap(JTMB.release());   
+}
+
+
+extern "C" {
+
+API_EXPORT(LLVMOrcLLJITRef)
+LLVMPY_CreateLLJITCompiler(const char **OutError) {
+    LLVMOrcLLJITRef JIT;
+    auto error = LLVMOrcCreateLLJIT(&JIT, nullptr);
+
+    if (error) {
+        char* message = LLVMGetErrorMessage(error);
+        *OutError = LLVMPY_CreateString(message);
+    }
+
+    return JIT;
 }
 
 API_EXPORT(LLVMOrcLLJITRef)
@@ -75,8 +69,9 @@ LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm,
     auto error = LLVMOrcCreateLLJIT(&JIT, builder);
 
     if (error) {
-        *OutError = LLVMPY_CreateString(
-            "Error creating LLJIT"); // JIT.takeError().getPtr()->message());
+        char* message = LLVMGetErrorMessage(error);
+        *OutError = LLVMPY_CreateString(message);
+        return nullptr;
     }
 
     auto lljit = unwrap(JIT);
