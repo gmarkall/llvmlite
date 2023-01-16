@@ -74,6 +74,9 @@ LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm,
         return nullptr;
     }
 
+    // FIXME: This needs moving into a separate function with its own Python API
+    // and unit testing. It enables looking up symbols in the current process when
+    // JIT linking.
     auto lljit = unwrap(JIT);
     auto &JD = lljit->getMainJITDylib();
     auto DLSGOrErr =
