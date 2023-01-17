@@ -19,41 +19,35 @@ inline LLVMOrcJITTargetMachineBuilderRef wrap(JITTargetMachineBuilder *JTMB) {
     return reinterpret_cast<LLVMOrcJITTargetMachineBuilderRef>(JTMB);
 }
 
-// Like LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine but doesn't
-// destroy the target machine.
-static LLVMOrcJITTargetMachineBuilderRef
-create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {
-    auto *TemplateTM = unwrap(TM);
-
-    auto JTMB = std::make_unique<JITTargetMachineBuilder>(
-        TemplateTM->getTargetTriple());
-
-    (*JTMB)
-        .setCPU(TemplateTM->getTargetCPU().str())
-        .setRelocationModel(TemplateTM->getRelocationModel())
-        .setCodeModel(TemplateTM->getCodeModel())
-        .setCodeGenOptLevel(TemplateTM->getOptLevel())
-        .setFeatures(TemplateTM->getTargetFeatureString())
-        .setOptions(TemplateTM->Options);
-
-    return wrap(JTMB.release());
-}
-
 extern "C" {
 
 API_EXPORT(LLVMOrcLLJITRef)
 LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
-    LLVMOrcLLJITRef JIT;
+    LLVMOrcLLJITRef jit;
     LLVMOrcLLJITBuilderRef builder = nullptr;
 
     if (tm) {
-        LLVMOrcJITTargetMachineBuilderRef jtmb =
-            create_jit_target_machine_builder_from_target_machine(tm);
+        // The following is based on
+        // LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine. However, we
+        // can't use that directly because it destroys the target machine, but
+        // we need to keep it alive because it is referenced by / shared with
+        // other objects on the Python side.
+        auto *template_tm = unwrap(tm);
+        auto jtmb = new JITTargetMachineBuilder(template_tm->getTargetTriple());
+
+        (*jtmb)
+            .setCPU(template_tm->getTargetCPU().str())
+            .setRelocationModel(template_tm->getRelocationModel())
+            .setCodeModel(template_tm->getCodeModel())
+            .setCodeGenOptLevel(template_tm->getOptLevel())
+            .setFeatures(template_tm->getTargetFeatureString())
+            .setOptions(template_tm->Options);
+
         builder = LLVMOrcCreateLLJITBuilder();
-        LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, jtmb);
+        LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, wrap(jtmb));
     }
 
-    auto error = LLVMOrcCreateLLJIT(&JIT, builder);
+    auto error = LLVMOrcCreateLLJIT(&jit, builder);
 
     if (error) {
         char *message = LLVMGetErrorMessage(error);
@@ -64,7 +58,7 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
     // FIXME: This needs moving into a separate function with its own Python API
     // and unit testing. It enables looking up symbols in the current process
     // when JIT linking.
-    auto lljit = unwrap(JIT);
+    auto lljit = unwrap(jit);
     auto &JD = lljit->getMainJITDylib();
     auto DLSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
     if (DLSGOrErr)
@@ -72,7 +66,7 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
     else
         abort();
 
-    return JIT;
+    return jit;
 }
 
 API_EXPORT(void)
