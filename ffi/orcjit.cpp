@@ -58,12 +58,28 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
     return jit;
 }
 
-API_EXPORT(void)
+API_EXPORT(LLVMOrcResourceTrackerRef)
 LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
     auto llvm_ts_ctx = LLVMOrcCreateNewThreadSafeContext();
     auto tsm = LLVMOrcCreateNewThreadSafeModule(M, llvm_ts_ctx);
-    LLVMOrcLLJITAddLLVMIRModule(JIT, LLVMOrcLLJITGetMainJITDylib(JIT), tsm);
+
+    LLVMOrcJITDylibRef JD = LLVMOrcLLJITGetMainJITDylib(JIT);
+    LLVMOrcResourceTrackerRef RT = LLVMOrcJITDylibCreateResourceTracker(JD);
+    LLVMOrcLLJITAddLLVMIRModuleWithRT(JIT, RT, tsm);
+
     LLVMOrcDisposeThreadSafeContext(llvm_ts_ctx);
+
+    return RT;
+}
+
+API_EXPORT(void)
+LLVMPY_RemoveIRModule(LLVMOrcResourceTrackerRef RT) {
+    auto error = LLVMOrcResourceTrackerRemove(RT);
+
+    if (error)
+        abort();
+
+    LLVMOrcReleaseResourceTracker(RT);
 }
 
 API_EXPORT(uint64_t)

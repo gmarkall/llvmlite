@@ -1184,9 +1184,9 @@ class TestOrcLLJIT(BaseTest):
         lljit = self.jit(self.module())
         mod = self.module(asm_mul)
         lljit.add_ir_module(mod)
-        lljit.remove_module(mod)
+        lljit.remove_ir_module(mod)
         with self.assertRaises(KeyError):
-            lljit.remove_module(mod)
+            lljit.remove_ir_module(mod)
         self.assertFalse(mod.closed)
         lljit.close()
         self.assertFalse(mod.closed)
