@@ -55,17 +55,6 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
         return nullptr;
     }
 
-    // FIXME: This needs moving into a separate function with its own Python API
-    // and unit testing. It enables looking up symbols in the current process
-    // when JIT linking.
-    auto lljit = unwrap(jit);
-    auto &JD = lljit->getMainJITDylib();
-    auto DLSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess('\0');
-    if (DLSGOrErr)
-        JD.addGenerator(std::move(*DLSGOrErr));
-    else
-        abort();
-
     return jit;
 }
 
@@ -78,7 +67,15 @@ LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
 }
 
 API_EXPORT(uint64_t)
-LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name) {
+LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name, const char **OutError) {
+    auto Sym = unwrap(JIT)->lookup(name);
+    if (!Sym) {
+        char *message = LLVMGetErrorMessage(wrap(Sym.takeError()));
+        *OutError = LLVMPY_CreateString(message);
+        LLVMDisposeErrorMessage(message);
+        return 0;
+    }
+
     LLVMOrcExecutorAddress ea;
     LLVMOrcLLJITLookup(JIT, &ea, name);
     return ea;
@@ -119,6 +116,18 @@ LLVMPY_LLJITDefineSymbol(LLVMOrcLLJITRef JIT, const char *name, void *addr) {
     auto error = JD.define(absoluteSymbols({{mangled, symbol}}));
 
     if (error)
+        abort();
+}
+
+API_EXPORT(void)
+LLVMPY_LLJITAddCurrentProcessSearch(LLVMOrcLLJITRef JIT) {
+    auto lljit = unwrap(JIT);
+    auto &JD = lljit->getMainJITDylib();
+    auto prefix = lljit->getDataLayout().getGlobalPrefix();
+    auto DLSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess(prefix);
+    if (DLSGOrErr)
+        JD.addGenerator(std::move(*DLSGOrErr));
+    else
         abort();
 }
 
