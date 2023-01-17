@@ -7,16 +7,22 @@ from llvmlite.binding.common import _encode_string
 
 class LLJIT(ffi.ObjectRef):
     def __init__(self, ptr):
-        self._modules = set()
         self._td = None
+        self._resource_trackers = {}
         ffi.ObjectRef.__init__(self, ptr)
 
     def add_ir_module(self, m):
-        if m in self._modules:
+        if m in self._resource_trackers:
             raise KeyError("module already added to this engine")
-        ffi.lib.LLVMPY_AddIRModule(self, m)
+        rt = ffi.lib.LLVMPY_AddIRModule(self, m)
         m._owned = True
-        self._modules.add(m)
+        self._resource_trackers[m] = rt
+
+    def remove_ir_module(self, m):
+        if m not in self._resource_trackers:
+            raise KeyError('Module not added to this LLJIT instance')
+        rt = self._resource_trackers.pop(m)
+        ffi.lib.LLVMPY_RemoveIRModule(rt)
 
     def lookup(self, fn):
         with ffi.OutputString() as outerr:
@@ -67,11 +73,12 @@ class LLJIT(ffi.ObjectRef):
 
     def _dispose(self):
         # The modules will be cleaned up by the EE
-        for mod in self._modules:
+        for mod in self._resource_trackers:
+            self.remove_ir_module(mod)
             mod.detach()
         if self._td is not None:
             self._td.detach()
-        self._modules.clear()
+        self._resource_trackers.clear()
         self._capi.LLVMPY_LLJITDispose(self)
 
 
@@ -133,3 +140,9 @@ ffi.lib.LLVMPY_LLJITDefineSymbol.argtypes = [
 ffi.lib.LLVMPY_LLJITAddCurrentProcessSearch.argtypes = [
     ffi.LLVMOrcLLJITRef,
 ]
+
+ffi.lib.LLVMPY_AddIRModule.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+    ffi.LLVMModuleRef,
+]
+ffi.lib.LLVMPY_AddIRModule.restype = ffi.LLVMOrcResourceTrackerRef
