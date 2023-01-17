@@ -74,6 +74,18 @@ asm_mul = r"""
     }}
     """
 
+asm_getversion = r"""
+    ; ModuleID = '<string>'
+    target triple = "{triple}"
+
+    declare i8* @Py_GetVersion()
+
+    define void @getversion(i32 %.1, i32 %.2) {{
+      %1 = call i8* @Py_GetVersion()
+      ret void
+    }}
+    """
+
 # `fadd` used on integer inputs
 asm_parse_error = r"""
     ; ModuleID = '<string>'
@@ -1261,6 +1273,22 @@ class TestOrcLLJIT(BaseTest):
 
         # destructor should have run
         self.assertEqual(ptr.contents.value, 20)
+
+    def test_lookup_current_process_symbol_fails(self):
+        # An attempt to lookup a symbol in the current process (Py_GetVersion,
+        # in this case) should fail with an appropriate error if we have not
+        # enabled searching the current process for symbols.
+        mod = self.module(asm_getversion)
+        lljit = self.jit(mod)
+        msg = 'Failed to materialize symbols:.*getversion'
+        with self.assertRaisesRegex(RuntimeError, msg):
+            lljit.lookup("getversion")
+
+    def test_lookup_current_process_symbol(self):
+        mod = self.module(asm_getversion)
+        lljit = self.jit(mod)
+        lljit.add_current_process_search()
+        lljit.lookup("getversion")
 
 
 class TestValueRef(BaseTest):

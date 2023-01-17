@@ -19,7 +19,12 @@ class LLJIT(ffi.ObjectRef):
         self._modules.add(m)
 
     def lookup(self, fn):
-        return ffi.lib.LLVMPY_LLJITLookup(self, fn.encode("ascii"))
+        with ffi.OutputString() as outerr:
+            ptr = ffi.lib.LLVMPY_LLJITLookup(self, fn.encode("ascii"), outerr)
+            if not ptr:
+                raise RuntimeError(str(outerr))
+
+        return ptr
 
     @property
     def target_data(self):
@@ -53,6 +58,13 @@ class LLJIT(ffi.ObjectRef):
         """
         ffi.lib.LLVMPY_LLJITDefineSymbol(self, _encode_string(name), c_void_p(address))
 
+    def add_current_process_search(self):
+        """
+        Enable searching for global symbols in the current process when
+        linking.
+        """
+        ffi.lib.LLVMPY_LLJITAddCurrentProcessSearch(self)
+
     def _dispose(self):
         # The modules will be cleaned up by the EE
         for mod in self._modules:
@@ -84,6 +96,7 @@ ffi.lib.LLVMPY_AddIRModule.argtypes = [
 ffi.lib.LLVMPY_LLJITLookup.argtypes = [
     ffi.LLVMOrcLLJITRef,
     c_char_p,
+    POINTER(c_char_p),
 ]
 ffi.lib.LLVMPY_LLJITLookup.restype = c_uint64
 
@@ -115,4 +128,8 @@ ffi.lib.LLVMPY_LLJITDefineSymbol.argtypes = [
     ffi.LLVMOrcLLJITRef,
     c_char_p,
     c_void_p,
+]
+
+ffi.lib.LLVMPY_LLJITAddCurrentProcessSearch.argtypes = [
+    ffi.LLVMOrcLLJITRef,
 ]
