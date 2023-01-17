@@ -49,7 +49,6 @@ class LLJIT(ffi.ObjectRef):
     def define_symbol(self, name, address):
         ffi.lib.LLVMPY_LLJITDefineSymbol(self, _encode_string(name), c_void_p(address))
 
-
     def _dispose(self):
         # The modules will be cleaned up by the EE
         for mod in self._modules:
@@ -65,10 +64,7 @@ def create_lljit_compiler(target_machine=None):
     Create an LLJIT instance
     """
     with ffi.OutputString() as outerr:
-        if target_machine is None:
-            lljit = ffi.lib.LLVMPY_CreateLLJITCompiler(outerr)
-        else:
-            lljit = ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine(target_machine, outerr)
+        lljit = ffi.lib.LLVMPY_CreateLLJITCompiler(target_machine, outerr)
         if not lljit:
             raise RuntimeError(str(outerr))
 
@@ -91,11 +87,6 @@ def define_symbol(name, address):
     _known_symbols[name] = address
 
 
-ffi.lib.LLVMPY_CreateLLJITCompiler.argtypes = [
-    POINTER(c_char_p),
-]
-ffi.lib.LLVMPY_CreateLLJITCompiler.restype = ffi.LLVMOrcLLJITRef
-
 ffi.lib.LLVMPY_AddIRModule.argtypes = [
     ffi.LLVMOrcLLJITRef,
     ffi.LLVMModuleRef,
@@ -113,11 +104,11 @@ ffi.lib.LLVMPY_LLJITGetDataLayout.argtypes = [
 ]
 ffi.lib.LLVMPY_LLJITGetDataLayout.restype = ffi.LLVMTargetDataRef
 
-ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine.argtypes = [
+ffi.lib.LLVMPY_CreateLLJITCompiler.argtypes = [
     ffi.LLVMTargetMachineRef,
     POINTER(c_char_p),
 ]
-ffi.lib.LLVMPY_CreateLLJITCompilerFromTargetMachine.restype = ffi.LLVMOrcLLJITRef
+ffi.lib.LLVMPY_CreateLLJITCompiler.restype = ffi.LLVMOrcLLJITRef
 
 ffi.lib.LLVMPY_LLJITDispose.argtypes = [
     ffi.LLVMOrcLLJITRef,

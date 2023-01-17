@@ -42,26 +42,17 @@ create_jit_target_machine_builder_from_target_machine(LLVMTargetMachineRef TM) {
 extern "C" {
 
 API_EXPORT(LLVMOrcLLJITRef)
-LLVMPY_CreateLLJITCompiler(const char **OutError) {
+LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
     LLVMOrcLLJITRef JIT;
-    auto error = LLVMOrcCreateLLJIT(&JIT, nullptr);
+    LLVMOrcLLJITBuilderRef builder = nullptr;
 
-    if (error) {
-        char *message = LLVMGetErrorMessage(error);
-        *OutError = LLVMPY_CreateString(message);
+    if (tm) {
+        LLVMOrcJITTargetMachineBuilderRef jtmb =
+            create_jit_target_machine_builder_from_target_machine(tm);
+        builder = LLVMOrcCreateLLJITBuilder();
+        LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, jtmb);
     }
 
-    return JIT;
-}
-
-API_EXPORT(LLVMOrcLLJITRef)
-LLVMPY_CreateLLJITCompilerFromTargetMachine(LLVMTargetMachineRef tm,
-                                            const char **OutError) {
-    LLVMOrcJITTargetMachineBuilderRef jtmb =
-        create_jit_target_machine_builder_from_target_machine(tm);
-    LLVMOrcLLJITBuilderRef builder = LLVMOrcCreateLLJITBuilder();
-    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, jtmb);
-    LLVMOrcLLJITRef JIT;
     auto error = LLVMOrcCreateLLJIT(&JIT, builder);
 
     if (error) {
