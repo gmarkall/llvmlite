@@ -68,17 +68,24 @@ LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
 
 API_EXPORT(uint64_t)
 LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name, const char **OutError) {
-    auto Sym = unwrap(JIT)->lookup(name);
-    if (!Sym) {
-        char *message = LLVMGetErrorMessage(wrap(Sym.takeError()));
+    // Based upon LLVMOrcLLJITLookup - however the use of that function results
+    // in assertion errors when disposing of the LLJIT with the message:
+    //
+    //     llvm::orc::SymbolStringPool::~SymbolStringPool(): Assertion
+    //     `Pool.empty() && "Dangling references at pool destruction time"'
+    //     failed.
+    //
+    // if the lookup fails. Here we handle cleanup in the error case ourselves.
+
+    auto sym = unwrap(JIT)->lookup(name);
+    if (!sym) {
+        char *message = LLVMGetErrorMessage(wrap(sym.takeError()));
         *OutError = LLVMPY_CreateString(message);
         LLVMDisposeErrorMessage(message);
         return 0;
     }
 
-    LLVMOrcExecutorAddress ea;
-    LLVMOrcLLJITLookup(JIT, &ea, name);
-    return ea;
+    return sym->getAddress();
 }
 
 API_EXPORT(LLVMTargetDataRef)
