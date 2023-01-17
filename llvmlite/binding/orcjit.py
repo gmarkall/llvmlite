@@ -47,6 +47,10 @@ class LLJIT(ffi.ObjectRef):
         ffi.lib.LLVMPY_LLJITRunDeinitializers(self)
 
     def define_symbol(self, name, address):
+        """
+        Register the *address* of global symbol *name*.  This will make
+        it usable (e.g. callable) from LLVM-compiled functions.
+        """
         ffi.lib.LLVMPY_LLJITDefineSymbol(self, _encode_string(name), c_void_p(address))
 
     def _dispose(self):
@@ -68,23 +72,7 @@ def create_lljit_compiler(target_machine=None):
         if not lljit:
             raise RuntimeError(str(outerr))
 
-    pylljit = LLJIT(lljit)
-
-    for name, address in _known_symbols.items():
-        pylljit.define_symbol(name, address)
-
-    return pylljit
-
-
-_known_symbols = {}
-
-
-def define_symbol(name, address):
-    """
-    Register the *address* of global symbol *name*.  This will make
-    it usable (e.g. callable) from LLVM-compiled functions.
-    """
-    _known_symbols[name] = address
+    return  LLJIT(lljit)
 
 
 ffi.lib.LLVMPY_AddIRModule.argtypes = [
