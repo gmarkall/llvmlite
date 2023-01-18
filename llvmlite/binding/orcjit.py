@@ -72,7 +72,8 @@ class LLJIT(ffi.ObjectRef):
         ffi.lib.LLVMPY_LLJITAddCurrentProcessSearch(self)
 
     def _dispose(self):
-        # The modules will be cleaned up by the EE
+        # The modules will be cleaned up by the LLJIT, but we need to release
+        # the resource trackers.
         for mod, rt in self._resource_trackers.items():
             ffi.lib.LLVMPY_ReleaseResourceTracker(rt)
             mod.detach()
