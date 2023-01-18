@@ -1,7 +1,8 @@
-from ctypes import POINTER, c_char_p, c_void_p, c_uint64
+from ctypes import POINTER, c_char_p, c_void_p, c_uint64, string_at
 
 from llvmlite.binding import ffi, targets
 from llvmlite.binding.common import _encode_string
+from llvmlite.binding.executionengine import _ObjectCacheRef
 
 
 class LLJIT(ffi.ObjectRef):
@@ -70,6 +71,57 @@ class LLJIT(ffi.ObjectRef):
         linking.
         """
         ffi.lib.LLVMPY_LLJITAddCurrentProcessSearch(self)
+
+    def set_object_cache(self, notify_func=None, getbuffer_func=None):
+        """
+        Set the object cache "notifyObjectCompiled" and "getBuffer"
+        callbacks to the given Python functions.
+        """
+        self._object_cache_notify = notify_func
+        self._object_cache_getbuffer = getbuffer_func
+        # Lifetime of the object cache is managed by us.
+        self._object_cache = _ObjectCacheRef(self)
+        # Note this doesn't keep a reference to self, to avoid reference
+        # cycles.
+        ffi.lib.LLVMPY_SetObjectCache(self, self._object_cache)
+
+    def _raw_object_cache_notify(self, data):
+        """
+        Low-level notify hook.
+        """
+        if self._object_cache_notify is None:
+            return
+        module_ptr = data.contents.module_ptr
+        buf_ptr = data.contents.buf_ptr
+        buf_len = data.contents.buf_len
+        buf = string_at(buf_ptr, buf_len)
+        module = self._find_module_ptr(module_ptr)
+        if module is None:
+            # The LLVM EE should only give notifications for modules
+            # known by us.
+            raise RuntimeError("object compilation notification "
+                               "for unknown module %s" % (module_ptr,))
+        self._object_cache_notify(module, buf)
+
+    def _raw_object_cache_getbuffer(self, data):
+        """
+        Low-level getbuffer hook.
+        """
+        if self._object_cache_getbuffer is None:
+            return
+        module_ptr = data.contents.module_ptr
+        module = self._find_module_ptr(module_ptr)
+        if module is None:
+            # The LLVM EE should only give notifications for modules
+            # known by us.
+            raise RuntimeError("object compilation notification "
+                               "for unknown module %s" % (module_ptr,))
+
+        buf = self._object_cache_getbuffer(module)
+        if buf is not None:
+            # Create a copy, which will be freed by the caller
+            data[0].buf_ptr = ffi.lib.LLVMPY_CreateByteString(buf, len(buf))
+            data[0].buf_len = len(buf)
 
     def _dispose(self):
         # The modules will be cleaned up by the LLJIT, but we need to release
