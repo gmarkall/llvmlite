@@ -82,6 +82,11 @@ LLVMPY_RemoveIRModule(LLVMOrcResourceTrackerRef RT) {
     LLVMOrcReleaseResourceTracker(RT);
 }
 
+API_EXPORT(void)
+LLVMPY_ReleaseResourceTracker(LLVMOrcResourceTrackerRef RT) {
+    LLVMOrcReleaseResourceTracker(RT);
+}
+
 API_EXPORT(uint64_t)
 LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name, const char **OutError) {
     // Based upon LLVMOrcLLJITLookup - however the use of that function results

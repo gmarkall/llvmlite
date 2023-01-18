@@ -73,8 +73,8 @@ class LLJIT(ffi.ObjectRef):
 
     def _dispose(self):
         # The modules will be cleaned up by the EE
-        for mod in self._resource_trackers:
-            self.remove_ir_module(mod)
+        for mod, rt in self._resource_trackers.items():
+            ffi.lib.LLVMPY_ReleaseResourceTracker(rt)
             mod.detach()
         if self._td is not None:
             self._td.detach()
@@ -146,3 +146,8 @@ ffi.lib.LLVMPY_AddIRModule.argtypes = [
     ffi.LLVMModuleRef,
 ]
 ffi.lib.LLVMPY_AddIRModule.restype = ffi.LLVMOrcResourceTrackerRef
+
+
+ffi.lib.LLVMPY_ReleaseResourceTracker.argtypes = [
+    ffi.LLVMOrcResourceTrackerRef,
+]
