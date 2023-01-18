@@ -1,9 +1,8 @@
-from ctypes import (POINTER, c_char_p, c_bool, c_void_p,
-                    c_int, c_uint64, c_size_t, CFUNCTYPE, string_at, cast,
-                    py_object, Structure)
+from ctypes import POINTER, c_char_p, c_void_p, c_uint64
 
-from llvmlite.binding import ffi, targets, object_file
+from llvmlite.binding import ffi, targets
 from llvmlite.binding.common import _encode_string
+
 
 class LLJIT(ffi.ObjectRef):
     def __init__(self, ptr):
@@ -62,7 +61,8 @@ class LLJIT(ffi.ObjectRef):
         Register the *address* of global symbol *name*.  This will make
         it usable (e.g. callable) from LLVM-compiled functions.
         """
-        ffi.lib.LLVMPY_LLJITDefineSymbol(self, _encode_string(name), c_void_p(address))
+        ffi.lib.LLVMPY_LLJITDefineSymbol(self, _encode_string(name),
+                                         c_void_p(address))
 
     def add_current_process_search(self):
         """
@@ -91,7 +91,7 @@ def create_lljit_compiler(target_machine=None):
         if not lljit:
             raise RuntimeError(str(outerr))
 
-    return  LLJIT(lljit)
+    return LLJIT(lljit)
 
 
 ffi.lib.LLVMPY_AddIRModule.argtypes = [
