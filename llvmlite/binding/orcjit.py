@@ -1,4 +1,4 @@
-from ctypes import POINTER, c_char_p, c_void_p, c_uint64, string_at
+from ctypes import POINTER, c_bool, c_char_p, c_void_p, c_uint64, string_at
 
 from llvmlite.binding import ffi, targets
 from llvmlite.binding.common import _encode_string
@@ -56,6 +56,19 @@ class LLJIT(ffi.ObjectRef):
         resources.
         """
         ffi.lib.LLVMPY_LLJITRunDeinitializers(self)
+
+    def add_object_file(self, obj_file):
+        """
+        Add object file to this LLJIT instance. object_file can be instance of
+        :class:ObjectFile or a string representing file system path.
+        """
+        if isinstance(obj_file, str):
+            obj_file = object_file.ObjectFileRef.from_path(obj_file)
+
+        with ffi.OutputString() as outerr:
+            error = ffi.lib.LLVMPY_LLJITAddObjectFile(self, obj_file, outerr)
+            if error:
+                raise RuntimeError(str(outerr))
 
     def define_symbol(self, name, address):
         """
@@ -204,3 +217,10 @@ ffi.lib.LLVMPY_AddIRModule.restype = ffi.LLVMOrcResourceTrackerRef
 ffi.lib.LLVMPY_ReleaseResourceTracker.argtypes = [
     ffi.LLVMOrcResourceTrackerRef,
 ]
+
+ffi.lib.LLVMPY_LLJITAddObjectFile.argtypes = [
+    ffi.LLVMOrcLLJITRef,
+    ffi.LLVMObjectFileRef,
+    POINTER(c_char_p),
+]
+ffi.lib.LLVMPY_LLJITAddObjectFile.restype = c_bool

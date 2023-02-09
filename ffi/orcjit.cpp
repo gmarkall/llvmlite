@@ -2,9 +2,11 @@
 
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/LLJIT.h"
+#include "llvm-c/Object.h"
 #include "llvm-c/Orc.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/Object/ObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -18,6 +20,17 @@ inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
 inline LLVMOrcJITTargetMachineBuilderRef wrap(JITTargetMachineBuilder *JTMB) {
     return reinterpret_cast<LLVMOrcJITTargetMachineBuilderRef>(JTMB);
 }
+
+// unwrap for LLVMObjectFileRef
+// from Object/Object.cpp
+namespace llvm {
+namespace object {
+
+inline OwningBinary<ObjectFile> *unwrap(LLVMObjectFileRef OF) {
+    return reinterpret_cast<OwningBinary<ObjectFile> *>(OF);
+}
+} // namespace object
+} // namespace llvm
 
 extern "C" {
 
@@ -157,6 +170,23 @@ LLVMPY_LLJITAddCurrentProcessSearch(LLVMOrcLLJITRef JIT) {
         JD.addGenerator(std::move(*DLSGOrErr));
     else
         abort();
+}
+
+API_EXPORT(bool)
+LLVMPY_LLJITAddObjectFile(LLVMOrcLLJITRef JIT, LLVMObjectFileRef ObjF, const char** OutError) {
+    using namespace llvm::object;
+    auto lljit = unwrap(JIT);
+    auto object_file = unwrap(ObjF);
+    auto binary_tuple = object_file->takeBinary();
+    auto error = lljit->addObjectFile(std::move(binary_tuple.second));
+
+    if (error) {
+        char *message = LLVMGetErrorMessage(wrap(std::move(error)));
+        *OutError = LLVMPY_CreateString(message);
+        return true;
+    }
+
+    return false;
 }
 
 } // extern "C"

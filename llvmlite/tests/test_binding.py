@@ -2132,7 +2132,7 @@ class TestObjectFile(BaseTest):
                 break
         self.assertTrue(has_text)
 
-    def test_add_object_file(self):
+    def test_mcjit_add_object_file(self):
         target_machine = self.target_machine(jit=False)
         mod = self.module()
         obj_bin = target_machine.emit_object(mod)
@@ -2145,6 +2145,22 @@ class TestObjectFile(BaseTest):
 
         sum_twice = CFUNCTYPE(c_int, c_int, c_int)(
             jit.get_function_address("sum_twice"))
+
+        self.assertEqual(sum_twice(2, 3), 10)
+
+    def test_lljit_add_object_file(self):
+        target_machine = self.target_machine(jit=False)
+        mod = self.module()
+        obj_bin = target_machine.emit_object(mod)
+        obj = llvm.ObjectFileRef.from_data(obj_bin)
+
+        lljit = llvm.create_lljit_compiler(target_machine)
+        lljit.add_ir_module(self.module(self.mod_asm))
+
+        lljit.add_object_file(obj)
+
+        sum_twice = CFUNCTYPE(c_int, c_int, c_int)(
+            lljit.lookup("sum_twice"))
 
         self.assertEqual(sum_twice(2, 3), 10)
 
