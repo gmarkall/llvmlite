@@ -1,4 +1,5 @@
 #include "core.h"
+#include "objectcache.h"
 
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/LLJIT.h"
@@ -12,6 +13,7 @@ using namespace llvm;
 using namespace llvm::orc;
 
 inline LLJIT *unwrap(LLVMOrcLLJITRef P) { return reinterpret_cast<LLJIT *>(P); }
+inline LLJITBuilder *unwrap(LLVMOrcLLJITBuilderRef P) { return reinterpret_cast<LLJITBuilder *>(P); }
 
 inline TargetMachine *unwrap(LLVMTargetMachineRef TM) {
     return reinterpret_cast<TargetMachine *>(TM);
@@ -35,31 +37,38 @@ inline OwningBinary<ObjectFile> *unwrap(LLVMObjectFileRef OF) {
 extern "C" {
 
 API_EXPORT(LLVMOrcLLJITRef)
-LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
+LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, LLVMPYObjectCacheRef C, const char **OutError) {
     LLVMOrcLLJITRef jit;
-    LLVMOrcLLJITBuilderRef builder = nullptr;
+    LLVMOrcLLJITBuilderRef builder = LLVMOrcCreateLLJITBuilder();
 
-    if (tm) {
-        // The following is based on
-        // LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine. However, we
-        // can't use that directly because it destroys the target machine, but
-        // we need to keep it alive because it is referenced by / shared with
-        // other objects on the Python side.
-        auto *template_tm = unwrap(tm);
-        auto jtmb = new JITTargetMachineBuilder(template_tm->getTargetTriple());
+    // The following is based on
+    // LLVMOrcJITTargetMachineBuilderCreateFromTargetMachine. However, we
+    // can't use that directly because it destroys the target machine, but
+    // we need to keep it alive because it is referenced by / shared with
+    // other objects on the Python side.
+    auto *template_tm = unwrap(tm);
+    auto jtmb = new JITTargetMachineBuilder(template_tm->getTargetTriple());
 
-        (*jtmb)
-            .setCPU(template_tm->getTargetCPU().str())
-            .setRelocationModel(template_tm->getRelocationModel())
-            .setCodeModel(template_tm->getCodeModel())
-            .setCodeGenOptLevel(template_tm->getOptLevel())
-            .setFeatures(template_tm->getTargetFeatureString())
-            .setOptions(template_tm->Options);
+    (*jtmb)
+        .setCPU(template_tm->getTargetCPU().str())
+        .setRelocationModel(template_tm->getRelocationModel())
+        .setCodeModel(template_tm->getCodeModel())
+        .setCodeGenOptLevel(template_tm->getOptLevel())
+        .setFeatures(template_tm->getTargetFeatureString())
+        .setOptions(template_tm->Options);
 
-        builder = LLVMOrcCreateLLJITBuilder();
-        LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, wrap(jtmb));
+
+    if (C) {
+        unwrap(builder)->setCompileFunctionCreator(
+            [&](JITTargetMachineBuilder JTMB) -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
+                auto TM = JTMB.createTargetMachine();
+                if (!TM)
+                    return TM.takeError();
+                return std::make_unique<TMOwningSimpleCompiler>(std::move(*TM), C);
+            });
     }
 
+    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(builder, wrap(jtmb));
     auto error = LLVMOrcCreateLLJIT(&jit, builder);
 
     if (error) {
