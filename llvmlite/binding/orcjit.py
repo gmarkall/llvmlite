@@ -152,6 +152,8 @@ def create_lljit_compiler(target_machine, object_cache=None):
     """
     Create an LLJIT instance
     """
+    if target_machine is None:
+        raise RuntimeError('target_machine must be provided')
     with ffi.OutputString() as outerr:
         lljit = ffi.lib.LLVMPY_CreateLLJITCompiler(target_machine,
                                                    object_cache, outerr)

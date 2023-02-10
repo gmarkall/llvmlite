@@ -1115,6 +1115,8 @@ class TestOrcLLJIT(BaseTest):
         return CFUNCTYPE(c_int, c_int, c_int)(cfptr)
 
     def jit(self, mod, target_machine=None):
+        if target_machine is None:
+            target_machine = self.target_machine(jit=True)
         lljit = llvm.create_lljit_compiler(target_machine)
         lljit.add_ir_module(mod)
         return lljit
