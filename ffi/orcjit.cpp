@@ -64,10 +64,11 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, const char **OutError) {
 
     auto error = LLVMOrcCreateLLJIT(&jit, builder);
 
-    unwrap(jit)->getIRCompileLayer().setNotifyCompiled([](MaterializationResponsibility &R, ThreadSafeModule TSM) {
-        // Move TSM to take ownership and preserve the module.
-        GlobalTSMs.push_back(std::move(TSM));
-    });
+    unwrap(jit)->getIRCompileLayer().setNotifyCompiled(
+        [](MaterializationResponsibility &R, ThreadSafeModule TSM) {
+            // Move TSM to take ownership and preserve the module.
+            GlobalTSMs.push_back(std::move(TSM));
+        });
 
     if (error) {
         char *message = LLVMGetErrorMessage(error);
@@ -87,7 +88,7 @@ LLVMPY_AddIRModule(LLVMOrcLLJITRef JIT, LLVMModuleRef M) {
     LLVMOrcResourceTrackerRef RT = LLVMOrcJITDylibCreateResourceTracker(JD);
     LLVMErrorRef err = LLVMOrcLLJITAddLLVMIRModuleWithRT(JIT, RT, tsm);
     if (err)
-      abort();
+        abort();
 
     LLVMOrcDisposeThreadSafeContext(llvm_ts_ctx);
 
@@ -110,7 +111,8 @@ LLVMPY_ReleaseResourceTracker(LLVMOrcResourceTrackerRef RT) {
 }
 
 API_EXPORT(uint64_t)
-LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name, const char **OutError) {
+LLVMPY_LLJITLookup(LLVMOrcLLJITRef JIT, const char *name,
+                   const char **OutError) {
     // Based upon LLVMOrcLLJITLookup - however the use of that function results
     // in assertion errors when disposing of the LLJIT with the message:
     //
@@ -157,16 +159,22 @@ LLVMPY_LLJITRunDeinitializers(LLVMOrcLLJITRef JIT) {
         abort();
 }
 
-API_EXPORT(void)
-LLVMPY_LLJITDefineSymbol(LLVMOrcLLJITRef JIT, const char *name, void *addr) {
+API_EXPORT(bool)
+LLVMPY_LLJITDefineSymbol(LLVMOrcLLJITRef JIT, const char *name, void *addr,
+                         const char **OutError) {
     auto lljit = unwrap(JIT);
     auto &JD = lljit->getMainJITDylib();
     SymbolStringPtr mangled = lljit->mangleAndIntern(name);
     JITEvaluatedSymbol symbol = JITEvaluatedSymbol::fromPointer(addr);
     auto error = JD.define(absoluteSymbols({{mangled, symbol}}));
 
-    if (error)
-        abort();
+    if (error) {
+        char *message = LLVMGetErrorMessage(wrap(std::move(error)));
+        *OutError = LLVMPY_CreateString(message);
+        return true;
+    }
+
+    return false;
 }
 
 API_EXPORT(void)
@@ -174,7 +182,8 @@ LLVMPY_LLJITAddCurrentProcessSearch(LLVMOrcLLJITRef JIT) {
     auto lljit = unwrap(JIT);
     auto &JD = lljit->getMainJITDylib();
     auto prefix = lljit->getDataLayout().getGlobalPrefix();
-    auto DLSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess(prefix);
+    auto DLSGOrErr =
+        DynamicLibrarySearchGenerator::GetForCurrentProcess(prefix);
     if (DLSGOrErr)
         JD.addGenerator(std::move(*DLSGOrErr));
     else
@@ -182,7 +191,8 @@ LLVMPY_LLJITAddCurrentProcessSearch(LLVMOrcLLJITRef JIT) {
 }
 
 API_EXPORT(bool)
-LLVMPY_LLJITAddObjectFile(LLVMOrcLLJITRef JIT, LLVMObjectFileRef ObjF, const char** OutError) {
+LLVMPY_LLJITAddObjectFile(LLVMOrcLLJITRef JIT, LLVMObjectFileRef ObjF,
+                          const char **OutError) {
     using namespace llvm::object;
     auto lljit = unwrap(JIT);
     auto object_file = unwrap(ObjF);
