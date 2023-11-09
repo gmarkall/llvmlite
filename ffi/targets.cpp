@@ -186,6 +186,12 @@ LLVMPY_CreateTargetMachine(LLVMTargetRef T, const char *Triple, const char *CPU,
         rm = Reloc::PIC_;
     else if (rms == "dynamicnopic")
         rm = Reloc::DynamicNoPIC;
+    else if (rms == "ropi")
+        rm = Reloc::ROPI;
+    else if (rms == "rwpi")
+        rm = Reloc::RWPI;
+    else if (rms == "ropi_rwpi")
+        rm = Reloc::ROPI_RWPI;
 
     TargetOptions opt;
     opt.MCOptions.ShowMCInst = PrintMC;

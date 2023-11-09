@@ -166,7 +166,8 @@ class TargetData(ffi.ObjectRef):
         return size
 
 
-RELOC = frozenset(['default', 'static', 'pic', 'dynamicnopic'])
+RELOC = frozenset(['default', 'static', 'pic', 'dynamicnopic', 'ropi', 'rwpi',
+                   'ropi_rwpi'])
 CODEMODEL = frozenset(['default', 'jitdefault', 'small', 'kernel', 'medium',
                        'large'])
 
