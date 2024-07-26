@@ -10,6 +10,7 @@ build:
     python: "3.11"
   apt_packages:
     - llvm-15
+    - libclang-common-15-dev
   jobs:
     post_checkout:
       - sed -i "s/'llvm-config'/'llvm-config-15'/g" ffi/build.py
